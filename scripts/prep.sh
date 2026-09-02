@@ -3,10 +3,6 @@
 # qsub scripts/prep.sh -c anndatas/adata_raw.h5ad -k 20 30 40 50 -o results -g hvgs.csv
 # wrapper script to run cNMF prep on UCL Myriad
 
-# email, start and end
-#$ -m be
-#$ -M sjjgrww@ucl.ac.uk
-
 # wallclock time, 10 mins
 #$ -l h_rt=0:10:0
 
@@ -45,11 +41,12 @@ echo "Path to HVGs:                     $HVG_PATH"
 
 # run script
 /usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf prepare \
---output-dir $OUTDIR \
---name $RUN_NAME \
--c $COUNTS \
--k $K_VALS \
---n-iter $N_ITERS \
---genes-file $HVG_PATH \
---seed $SEED \
---total-workers 4
+	--output-dir $OUTDIR \
+	--name $RUN_NAME \
+	-c $COUNTS \
+	-k $K_VALS \
+	--n-iter $N_ITERS \
+	--genes-file $HVG_PATH \
+	--seed $SEED \
+	--total-workers 4
+

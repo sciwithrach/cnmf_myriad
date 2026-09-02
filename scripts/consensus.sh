@@ -1,11 +1,7 @@
 #!/bin/bash -l
 
-# qsub scripts/combine_and_plot.sh -o results -n 20260827
+# qsub scripts/consensus.sh -o results -n 20260827 -f 40 -l 0.5
 # wrapper script to run cNMF prep on UCL Myriad
-
-# email, start and end
-#$ -m be
-#$ -M sjjgrww@ucl.ac.uk
 
 # wallclock time, 10 mins
 #$ -l h_rt=0:10:0

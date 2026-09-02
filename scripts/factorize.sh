@@ -3,10 +3,6 @@
 # qsub scripts/factorize.sh -o results -g hvgs.csv -i 200 -k 20 30 40
 # wrapper script to run cNMF factorisation on UCL Myriad
 
-# email, start and end
-#$ -m be
-#$ -M sjjgrww@ucl.ac.uk
-
 # wallclock time, each iteration takes ~2m
 #$ -l h_rt=5:00:0
 
@@ -42,9 +38,6 @@ echo "Path to output directory: $OUTDIR"
 echo "Worker index:             $SGE_TASK_ID"
 echo "Number of iterations:     $N_ITERS"
 echo "Number of jobs for array: $N_JOBS"
-
-# print the full call
-set -x
 
 # factorize, run in strides of 100
 for (( i=$SGE_TASK_ID; i<$SGE_TASK_ID+50; i++ ))
