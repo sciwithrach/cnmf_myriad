@@ -12,8 +12,10 @@ Help()
     echo "Wrapper script to run cNMF (Kotliar et al., 2025) on UCL Myriad."
     echo
     echo "Syntax:"
-    echo "      bash prepare.sh    [-c -h|n|o|g|s|k|i]"
-    echo "      bash factorize.sh  [-h|n|o]"
+    echo "      bash prepare.sh			[-c -h|n|o|g|s|k|i]"
+    echo "      bash factorize.sh  		[-h|n|o]"
+    echo "	bash combine_and_plot.sh	[-h|n|o]"
+    echo "	bash consensus.sh		[-h|n|o|l|f]"
     echo
     echo "Options:"
     echo "h     Print help information      [all]"
@@ -24,6 +26,8 @@ Help()
     echo "s     Seed                        [prep]      (default = 42)"
     echo "k     List of components (k)      [factorize] (default = 20 30 40)"
     echo "i     Number of iterations to run [factorize] (default = 100)"
+    echo "l	Local density threshold     [consensus]	(default = 2)"
+    echo "f	Final components (k)	    [consensus]	(default = none)"
 }
 
 ########
@@ -36,9 +40,10 @@ OUTDIR="$(pwd)/results"
 SEED=42
 K_VALS="20 30 40"
 N_ITERS=100
+THRESHOLD=2
 
 # options
-while getopts "hn:o:c:g:s:k:i:" option
+while getopts "hn:o:c:g:s:k:i:l:f:" option
 do 
     case "${option}" in
         h)  
@@ -64,6 +69,10 @@ do
             done;;
         i)
             N_ITERS=${OPTARG};;
+	l)
+		THRESHOLD=${OPTARG};;
+	f)
+		SELECTED_K=${OPTARG};;
         \?) 
             echo "Error: Invalid option -${OPTARG}."
             exit;;
@@ -104,3 +113,5 @@ N_JOBS=$(( $K_LENGTH*$N_ITERS ))
 #echo "Length of k list:                 $K_LENGTH"
 #echo "Number of iterations:             $N_ITERS"
 #echo "Number of jobs for array:         $N_JOBS"
+echo "Local density threshold:		 $THRESHOLD"
+echo "Final components (k, consensus):	 $SELECTED_K"

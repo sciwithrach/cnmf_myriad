@@ -1,6 +1,6 @@
 #!/bin/bash -l
 
-# qsub scripts/prep.sh -c anndatas/adata_raw.h5ad -k 20 30 40 50 -o results -g hvgs.csv
+# qsub scripts/combine_and_plot.sh -o results -n 20260827
 # wrapper script to run cNMF prep on UCL Myriad
 
 # email, start and end
@@ -20,7 +20,7 @@
 # 10GB is default
 
 # job name
-#$ -N cnmf-prep
+#$ -N cnmf-consensus
 
 # working directory
 #$ -wd /home/sjjgrww/Scratch/cnmf
@@ -37,19 +37,13 @@ source scripts/include.sh
 
 # echo arguments
 echo "Run name:                         $RUN_NAME"
-echo "Seed:                             $SEED"
-echo "Components (k) for factorization: $K_VALS"
-echo "Path to counts:                   $COUNTS"
 echo "Path to output directory:         $OUTDIR"
-echo "Path to HVGs:                     $HVG_PATH"
 
-# run script
-/usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf prepare \
---output-dir $OUTDIR \
---name $RUN_NAME \
--c $COUNTS \
--k $K_VALS \
---n-iter $N_ITERS \
---genes-file $HVG_PATH \
---seed $SEED \
---total-workers 4
+# consensus
+/usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf consensus \
+	--output-dir $OUTDIR \
+	--name $RUN_NAME \
+	--components $SELECTED_K \
+	--local-density-threshold $THRESHOLD \
+	--show-clustering
+
