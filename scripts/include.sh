@@ -28,6 +28,8 @@ Help()
     echo "i     Number of iterations to run [factorize] (default = 100)"
     echo "l	Local density threshold     [consensus]	(default = 2)"
     echo "f	Final components (k)	    [consensus]	(default = none)"
+    echo "m     Obs column to subset by	    [subset]	(default = none)"
+    echo "x     Subset to keep		    [subset]	(default = none)"
 }
 
 ########
@@ -43,39 +45,43 @@ N_ITERS=100
 THRESHOLD=2
 
 # options
-while getopts "hn:o:c:g:s:k:i:l:f:" option
+while getopts "hn:o:c:g:s:k:i:l:f:m:x:" option
 do 
     case "${option}" in
         h)  
-            Help
-            exit;;
+            	Help
+            	exit;;
         n)
-            RUN_NAME=${OPTARG};;
+            	RUN_NAME=${OPTARG};;
         o)
-            OUTDIR=${OPTARG}
-            mkdir -p $OUTDIR;;
+            	OUTDIR=${OPTARG}
+            	mkdir -p $OUTDIR;;
         c)
-            COUNTS=${OPTARG};;
+            	COUNTS=${OPTARG};;
         g)
-            HVG_PATH=${OPTARG};;
+            	HVG_PATH=${OPTARG};;
         s)
-            SEED=${OPTARG};;
+            	SEED=${OPTARG};;
         k)
-            K_VALS=${OPTARG}
-            # take very value until the next flag
-            while [[ ${!OPTIND} != -* && -n ${!OPTIND} ]]; do
-                K_VALS+=" ${!OPTIND}"
-                OPTIND=$((OPTIND + 1))
-            done;;
-        i)
-            N_ITERS=${OPTARG};;
+            	K_VALS=${OPTARG}
+            	# take very value until the next flag
+            	while [[ ${!OPTIND} != -* && -n ${!OPTIND} ]]; do
+                	K_VALS+=" ${!OPTIND}"
+                	OPTIND=$((OPTIND + 1))
+            	done;;
+	i)
+		N_ITERS=${OPTARG};;
 	l)
 		THRESHOLD=${OPTARG};;
 	f)
 		SELECTED_K=${OPTARG};;
-        \?) 
-            echo "Error: Invalid option -${OPTARG}."
-            exit;;
+	m)
+	    	METADATA=${OPTARG};;
+        x)
+	    	SUBSET=${OPTARG};;
+	\?) 
+            	echo "Error: Invalid option -${OPTARG}."
+            	exit;;
     esac
 done
 
@@ -113,5 +119,5 @@ N_JOBS=$(( $K_LENGTH*$N_ITERS ))
 #echo "Length of k list:                 $K_LENGTH"
 #echo "Number of iterations:             $N_ITERS"
 #echo "Number of jobs for array:         $N_JOBS"
-echo "Local density threshold:		 $THRESHOLD"
-echo "Final components (k, consensus):	 $SELECTED_K"
+#echo "Local density threshold:		 $THRESHOLD"
+#echo "Final components (k, consensus):	 $SELECTED_K"
