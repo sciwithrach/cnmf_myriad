@@ -1,0 +1,29 @@
+Bootstrap: docker
+From: mambaorg/micromamba:bookworm-slim
+
+%help
+    This container provides the utricle-qc environment for the QC pipeline.
+
+%files
+    envs/utricle-qc.yml /opt/env.yml
+
+%environment
+    export PATH="/opt/env/bin:$PATH"
+    export CONDA_PREFIX="/opt/env"
+
+%post
+    apt-get update && apt-get install -y procps
+
+    # Disable SSL verification on WSL2 (OpenSSL 3.5.x TLS compatibility issue)
+    if grep -qi "microsoft" /proc/version 2>/dev/null; then
+        micromamba config set ssl_verify false
+    fi
+
+    micromamba create -q -y -f /opt/env.yml -p /opt/env
+
+    micromamba clean -aqy
+
+    micromamba config set --system use_lockfiles false
+
+%runscript
+    exec "$@"
