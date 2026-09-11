@@ -76,10 +76,10 @@ def run_topometry(adata_path, descriptor, npcs=30):
 
 	# run standard pre-processing
 	adata = tp.sc.preprocess(adata, save_to_raw=False)
-    
+
 	# save list of highly variable genes
-	hvgs = list(adata.var_names)    
-	pd.Dataframe(hvgs).to_csv(f'hvgs_{descriptor}.csv', header=False, index=False)
+	hvgs = list(adata.var_names)
+	pd.DataFrame(hvgs).to_csv(f'hvgs_{descriptor}.csv', header=False, index=False)
 
 	# generate the PCAxUMAP baseline
 	pca_umap_baseline(adata, npcs=npcs, savename=descriptor)
@@ -91,25 +91,25 @@ def run_topometry(adata_path, descriptor, npcs=30):
 	# fit topograph object
 	tg = tp.sc.fit_adata(
 		adata,
-        	projections=("MAP", "PaCMAP"),
-        	do_leiden=True,
-        	leiden_resolutions=leiden_resolutions,
-        	n_jobs=-1,
-        	verbosity=0,
-        	random_state=seed
+		projections=("MAP", "PaCMAP"),
+		do_leiden=True,
+		leiden_resolutions=leiden_resolutions,
+		n_jobs=-1,
+		verbosity=0,
+		random_state=seed
 	)
 
 	# plot intrinsic dimensionality
 	tp.sc.intrinsic_dim(
-	        adata,
-        	tg=tg,
-	        n_jobs=-1,
-        	id_methods=['fsa', 'mle'],
-	        id_k_values=None
+		adata,
+		tg=tg,
+		n_jobs=-1,
+		id_methods=['fsa', 'mle'],
+		id_k_values=None
 	)
 
 	# evaluate representations
- 	tp.sc.evaluate_representations(
+	tp.sc.evaluate_representations(
 		adata,
 		tg,
 		return_df=False,
@@ -136,13 +136,13 @@ def find_best_embedding(adata, descriptor):
 	# rename any existing basis/projection from a prior run so they're included in comparison
 	for rep in ['basis', 'projection']:
 		renamed = f'{rep}_{tag}'
-        if rep in df['representation'].values():
-		df.loc[df['representation'] == rep, 'representation'] = renamed
-        if rep in adata.uns:
-		adata.uns[renamed] = adata.uns.pop(rep)
-        if rep in adata.obsm:
-		adata.obsm[f'X_{renamed}'] = adata.obsm[rep]
-		del adata.obsm[rep]
+		if rep in df['representation'].values:
+			df.loc[df['representation'] == rep, 'representation'] = renamed
+		if rep in adata.uns:
+			adata.uns[renamed] = adata.uns.pop(rep)
+		if rep in adata.obsm:
+			adata.obsm[f'X_{renamed}'] = adata.obsm[rep]
+			del adata.obsm[rep]
 	
 	# get list of bases and projections
 	base_list = ['spectral_scaffold', 'ms_spectral_scaffold', 'pca', f'basis_{tag}']
@@ -209,7 +209,7 @@ def main():
 
 	# parse arguments
 	args = build_parser().parse_args()
-    
+
 	# run topo
 	adata, tg = run_topometry(args.adata, args.descriptor)
 

@@ -41,10 +41,10 @@ cd $TMPDIR
 
 # run script
 /usr/bin/time --verbose apptainer run $HOME/Scratch/cnmf/envs/utricle-qc.sif python $HOME/Scratch/cnmf/scripts/topometry.py \
-	--adata $HOME/Scratch/cnmf/$COUNTS \
-	--descriptor $SUBSET \
-	--metadata $METADATA
+	--adata "$HOME/Scratch/cnmf/$COUNTS" \
+	--descriptor "$SUBSET" \
+	--metadata "$METADATA"
 
 # copy files
-tar -zcvf $HOME/Scratch/cnmf/results/topometry_$SUBSET_$JOB_ID.tar.gz $TMPDIR
+tar -zcvf "$HOME/Scratch/cnmf/results/topometry_${SUBSET}_$JOB_ID.tar.gz" $TMPDIR
 
