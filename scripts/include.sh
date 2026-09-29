@@ -20,7 +20,7 @@ Help()
     echo
     echo "Options:"
     echo "h     Print help information      [all]"
-    echo "n     Run name                    [all]       (default = {jobName}_{jobID})"
+    echo "n     Run name                    [all]       (default = cnmf_{YYYYMMDD}; pipeline.sh: cnmf_{tag}_{YYYYMMDD})"
     echo "o     Path to output directory    [all]       (default = working directory)"
     echo "c     Path to count data          [prep]      (nb: required for cnmf prepare)"
     echo "g     Path to HVGs                [prep]      (default = none)"
