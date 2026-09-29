@@ -15,7 +15,10 @@
 # job name
 #$ -N cnmf-factorize
 
-# array
+# array: default only (3 k x 200 iterations, 50 workers per task)
+# directives can't use variables, so for other k/iterations override it:
+# qsub -t 1-<number of k * iterations>:50 scripts/factorize.sh ...
+# (pipeline.sh does this automatically). The step must equal STRIDE below.
 #$ -t 1-600:50
 
 # working directory
@@ -39,8 +42,9 @@ echo "Worker index:             $SGE_TASK_ID"
 echo "Number of iterations:     $N_ITERS"
 echo "Number of jobs for array: $N_JOBS"
 
-# factorize, run in strides of 100
-for (( i=$SGE_TASK_ID; i<$SGE_TASK_ID+50; i++ ))
+# factorize, each task runs STRIDE workers (must match the step in -t)
+STRIDE=50
+for (( i=$SGE_TASK_ID; i<$SGE_TASK_ID+STRIDE && i<=N_JOBS; i++ ))
 do
 	/usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf factorize \
 	    --output-dir $OUTDIR \

@@ -31,6 +31,7 @@ apptainer build envs/utricle-qc.sif envs/utricle-qc.def
 1. `prep.sh`
 
 2. `factorize.sh`
+   - Standalone, override the array size: `qsub -t 1-N:50 scripts/factorize.sh ...`, where N = number of k values x iterations (`pipeline.sh` does this for you).
 
 4. `combine_and_plot.sh`
 
