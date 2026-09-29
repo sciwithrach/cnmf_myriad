@@ -32,12 +32,10 @@
 source scripts/include.sh
 
 # echo arguments
-echo "Run name:                         $RUN_NAME"
-echo "Seed:                             $SEED"
-echo "Components (k) for factorization: $K_VALS"
 echo "Path to counts:                   $COUNTS"
+echo "Obs column:                       $METADATA"
+echo "Subset:                           $SUBSET"
 echo "Path to output directory:         $OUTDIR"
-echo "Path to HVGs:                     $HVG_PATH"
 
 # run script
 /usr/bin/time --verbose apptainer run envs/cnmf_env.sif python scripts/subset.py \

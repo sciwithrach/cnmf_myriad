@@ -1,7 +1,7 @@
 #!/bin/bash -l
 
 # qsub scripts/combine_and_plot.sh -o results -n 20260827
-# wrapper script to run cNMF prep on UCL Myriad
+# wrapper script to combine cNMF factorizations and make the k selection plot on UCL Myriad
 
 # wallclock time, 10 mins
 #$ -l h_rt=0:10:0
@@ -37,12 +37,10 @@ echo "Path to output directory:         $OUTDIR"
 
 # combine
 /usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf combine \
---output-dir $OUTDIR \
---name $RUN_NAME \
+	--output-dir $OUTDIR \
+	--name $RUN_NAME
 
 # k selection plot
-# run script
 /usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf k_selection_plot \
---output-dir $OUTDIR \
---name $RUN_NAME \
-
+	--output-dir $OUTDIR \
+	--name $RUN_NAME

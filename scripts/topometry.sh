@@ -1,7 +1,8 @@
 #!/bin/bash -l
 
-# qsub scripts/topometry.sh -c anndatas/adata_ctype_HC.h5ad -x HC -m ctype
+# qsub scripts/topometry.sh -o results -c anndatas/adata_ctype_HC.h5ad -x HC -m ctype
 # wrapper script to run topometry on subset adata for cNMF on UCL Myriad
+# outputs: anndatas/adata_topometry_{metadata}_{subset}.h5ad, {outdir}/hvgs_{metadata}_{subset}.csv
 
 # wallclock time, 12h
 #$ -l h_rt=12:00:0
@@ -33,10 +34,13 @@
 source scripts/include.sh
 
 # echo arguments
-echo "Run name:                         $RUN_NAME"
 echo "Path to counts:                   $COUNTS"
+echo "Obs column:                       $METADATA"
+echo "Subset:                           $SUBSET"
+echo "Path to output directory:         $OUTDIR"
 
 # work in $TMPDIR
+START_DIR=$(pwd)
 cd $TMPDIR
 
 # run script
@@ -45,6 +49,12 @@ cd $TMPDIR
 	--descriptor "$SUBSET" \
 	--metadata "$METADATA"
 
-# copy files
-tar -zcvf "$HOME/Scratch/cnmf/results/topometry_${SUBSET}_$JOB_ID.tar.gz" $TMPDIR
+# copy updated adata and HVGs to known paths for prep
+TAG="${METADATA}_${SUBSET}"
+mkdir -p "$START_DIR/anndatas" "$OUTDIR"
+cp "adata_topometry_${SUBSET}.h5ad" "$START_DIR/anndatas/adata_topometry_${TAG}.h5ad"
+cp "hvgs_${SUBSET}.csv" "$OUTDIR/hvgs_${TAG}.csv"
 
+# copy plots and topometry object, $TMPDIR is deleted when the job ends
+mkdir -p "$OUTDIR/topometry_${TAG}"
+cp -r *.png *.pkl figures "$OUTDIR/topometry_${TAG}/"

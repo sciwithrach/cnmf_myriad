@@ -48,5 +48,5 @@ echo "Path to HVGs:                     $HVG_PATH"
 	--n-iter $N_ITERS \
 	--genes-file $HVG_PATH \
 	--seed $SEED \
-	--total-workers 4
+	--total-workers $N_JOBS
 

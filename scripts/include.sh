@@ -12,10 +12,11 @@ Help()
     echo "Wrapper script to run cNMF (Kotliar et al., 2025) on UCL Myriad."
     echo
     echo "Syntax:"
-    echo "      bash prepare.sh			[-c -h|n|o|g|s|k|i]"
+    echo "      bash prep.sh			[-c -h|n|o|g|s|k|i]"
     echo "      bash factorize.sh  		[-h|n|o]"
     echo "	bash combine_and_plot.sh	[-h|n|o]"
     echo "	bash consensus.sh		[-h|n|o|l|f]"
+    echo "	bash pipeline.sh		[-c -m -x -h|d|n|o|s|k|i|l]"
     echo
     echo "Options:"
     echo "h     Print help information      [all]"
@@ -29,6 +30,7 @@ Help()
     echo "l	Local density threshold     [consensus]	(default = 2)"
     echo "f	Final components (k)	    [consensus]	(default = none)"
     echo "m     Obs column to subset by	    [subset]	(default = none)"
+    echo "d     Dry run, print qsub commands only [pipeline]"
     echo "x     Subset to keep		    [subset]	(default = none)"
 }
 
@@ -45,12 +47,14 @@ N_ITERS=100
 THRESHOLD=2
 
 # options
-while getopts "hn:o:c:g:s:k:i:l:f:m:x:" option
+while getopts "hdn:o:c:g:s:k:i:l:f:m:x:" option
 do 
     case "${option}" in
         h)  
             	Help
             	exit;;
+        d)
+            	DRY_RUN=1;;
         n)
             	RUN_NAME=${OPTARG};;
         o)
