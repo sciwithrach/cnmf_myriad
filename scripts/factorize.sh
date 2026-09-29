@@ -3,8 +3,12 @@
 # qsub scripts/factorize.sh -o results -g hvgs.csv -i 200 -k 20 30 40
 # wrapper script to run cNMF factorisation on UCL Myriad
 
-# wallclock time, each iteration takes ~2m
-#$ -l h_rt=5:00:0
+# wallclock time, each iteration can take between 1m and 30m depending on k value
+# (higher k is slower; longest observed was 26m). Size for the slowest case, as the job is
+# killed at the limit: 10 iterations per task * 30m = 5h, plus margin = 6h.
+# Killed tasks can be resubmitted (--skip-completed-runs), but if k or the data grow,
+# raise this or lower STRIDE
+#$ -l h_rt=6:00:0
 
 # RAM, 2G
 #$ -l mem=2G
@@ -15,11 +19,11 @@
 # job name
 #$ -N cnmf-factorize
 
-# array: default only (3 k x 200 iterations, 50 workers per task)
+# array: default only (3 k x 200 iterations, 10 workers per task)
 # directives can't use variables, so for other k/iterations override it:
-# qsub -t 1-<number of k * iterations>:50 scripts/factorize.sh ...
+# qsub -t 1-<number of k * iterations>:10 scripts/factorize.sh ...
 # (pipeline.sh does this automatically). The step must equal STRIDE below.
-#$ -t 1-600:50
+#$ -t 1-600:10
 
 # working directory
 #$ -wd /home/sjjgrww/Scratch/cnmf
@@ -43,7 +47,7 @@ echo "Number of iterations:     $N_ITERS"
 echo "Number of jobs for array: $N_JOBS"
 
 # factorize, each task runs STRIDE workers (must match the step in -t)
-STRIDE=50
+STRIDE=10
 for (( i=$SGE_TASK_ID; i<$SGE_TASK_ID+STRIDE && i<=N_JOBS; i++ ))
 do
 	/usr/bin/time --verbose apptainer run envs/cnmf_env.sif cnmf factorize \

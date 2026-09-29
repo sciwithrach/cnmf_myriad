@@ -89,7 +89,7 @@ fi
 PREP_ID=$(submit -N cnmf-prep-$TAG $(hold $TOPO_ID) scripts/prep.sh \
 	$COMMON -c $PREP_COUNTS -g $HVGS -s $SEED -i $N_ITERS -k $K_VALS)
 
-FACT_ID=$(submit -N cnmf-factorize-$TAG $(hold $PREP_ID) -t 1-${N_JOBS}:50 scripts/factorize.sh \
+FACT_ID=$(submit -N cnmf-factorize-$TAG $(hold $PREP_ID) -t 1-${N_JOBS}:10 scripts/factorize.sh \
 	$COMMON -i $N_ITERS -k $K_VALS)
 
 COMBINE_ID=$(submit -N cnmf-combine-$TAG $(hold $FACT_ID) scripts/combine_and_plot.sh \
