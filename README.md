@@ -18,25 +18,55 @@ apptainer pull docker://quay.io/biocontainers/cnmf_1.7.1:pyhdfd78af_0 envs/cnmf_
 apptainer build envs/utricle-qc.sif envs/utricle-qc.def
 ```
 
-## Core script order
+## Order of jobs
 
-1. prep.sh
+### Subsetting & clustering data (optional)
 
-2. factorize.sh
+1. `subset.sh`
 
-3. consensus.sh
+2. `topometry.sh`
 
-- Note: Only run one consensus step at a time to avoid re-writing the cache.
+### Core cNMF functions
 
-4. combine_and_plot.sh
+1. `prep.sh`
 
-## Subsetting & clustering data
+2. `factorize.sh`
 
-Run these *before* running the core scripts above:
+4. `combine_and_plot.sh`
 
-1. subset.sh
+### After k plot inspection
 
-2. topometry.sh
+1. `consensus.sh`
+
+- Note: Only run one consensus step is run at a time to avoid re-writing the cache.
+
+## Running the pipeline
+
+`pipeline.sh` submits the whole chain as linked SGE jobs (`-hold_jid`). **Run from the `cnmf` directory.**
+
+Consensus is not included: inspect the k selection plot, then run `consensus.sh` separately.
+
+### Dry run (prints the qsub commands, submits nothing):
+
+```bash
+# with subsetting
+bash scripts/pipeline.sh -d -c anndatas/adata_raw.h5ad -m ctype -x HC -k 20 30 40 -i 200 -o results
+
+# without subsetting
+bash scripts/pipeline.sh -d -c anndatas/adata_raw.h5ad -g hvgs.csv -k 20 30 40 -i 200 -o results
+```
+
+### Submit:
+
+```bash
+# with subsetting: subset -> topometry -> prep -> factorize -> combine
+qsub scripts/pipeline.sh -c anndatas/adata_raw.h5ad -m ctype -x HC -k 20 30 40 -i 200 -o results
+
+# without subsetting: prep -> factorize -> combine (-g is required)
+qsub scripts/pipeline.sh -c anndatas/adata_raw.h5ad -g hvgs.csv -k 20 30 40 -i 200 -o results
+```
+
+Default run name is `cnmf_{tag}_{YYYYMMDD}` (tag is `{ctype}_{subset}` or the counts file name), unless `-n` is given. Outputs go in `results/{run name}/` unless `-o` is given.
 
 ## License
 
