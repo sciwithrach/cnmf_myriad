@@ -93,6 +93,11 @@ done
 # modules #
 ###########
 
+# non-login shells (e.g. qsub jobs) don't define the module function
+if ! type module &> /dev/null; then
+    source /etc/profile.d/modules.sh
+fi
+
 # load apptainer
 module load apptainer
 # add variable for anndata compatibility
