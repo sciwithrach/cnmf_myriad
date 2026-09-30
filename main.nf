@@ -82,12 +82,20 @@ workflow {
         direct     : true
     }
 
-    // rows with metadata + subset: subset -> topometry
-    SUBSET( rows.subsetting.map { m -> tuple(m, m.counts) } )
+    // rows with metadata + subset: subset -> topometry. These two only get the fields they use, not the whole
+    // meta: it carries n_jobs / k_vals / run_name, and Nextflow hashes val inputs, so changing --n_iters or
+    // --stride would otherwise invalidate their cache
+    SUBSET( rows.subsetting.map { m -> tuple([tag: m.tag, metadata: m.metadata, subset: m.subset], m.counts) } )
     TOPOMETRY( SUBSET.out.res )
 
+    // the full meta is joined back on the tag for prep
+    topo_out = TOPOMETRY.out.res
+        .map { sm, counts, hvgs -> tuple(sm.tag, counts, hvgs) }
+        .join( metas.map { m -> tuple(m.tag, m) } )
+        .map { tag, counts, hvgs, m -> tuple(m, counts, hvgs) }
+
     // rows without: prep straight from the given counts and HVGs
-    prep_in = TOPOMETRY.out.res
+    prep_in = topo_out
         .mix( rows.direct.map { m -> tuple(m, m.counts, m.hvgs) } )
     PREP( prep_in )
 
