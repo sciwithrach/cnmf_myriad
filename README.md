@@ -63,18 +63,22 @@ anndatas/adata_raw.h5ad,,,"20 30",,hvgs.csv,
 
 ### Run
 
-```bash
-# from the cnmf directory, e.g. in tmux
-bash scripts/run_nextflow.sh --samplesheet samplesheet.csv --n_iters 200
+Run from the `cnmf` directory, in `tmux` or `screen` (the Nextflow process has to stay alive while it submits jobs), with Java loaded and `nextflow` on your `PATH` (see Setup).
 
-# or directly
-nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
+```bash
+# real run
+nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv
+
+# after a failure or an edit: reuse cached tasks
+nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv -resume
 
 # check the setup first with a small run (assets/samplesheet_test.csv, results_test/)
 nextflow run main.nf -profile ucl_myriad,test
 ```
 
-`run_nextflow.sh` loads Java, writes the Nextflow log to `logs/nextflow.log` and adds `-resume`, so rerunning the same command after a failure only reruns the missing tasks.
+- `-resume` continues the latest run in this directory. To continue a specific one, give its name: `-resume jovial_goldberg` (`nextflow log` lists the run names). Without `-resume`, a run starts from scratch.
+- `conf/base.config` (resources) is always loaded; `-profile ucl_myriad` adds the SGE executor and singularity settings.
+- `scripts/run_nextflow.sh` is an optional wrapper that loads Java, writes the Nextflow log to `logs/nextflow.log`, and always adds `-profile ucl_myriad` and `-resume`. It can also be submitted as a job (`qsub scripts/run_nextflow.sh --samplesheet samplesheet.csv`) if compute nodes are allowed to submit jobs.
 
 | Parameter | Default | Description |
 |---|---|---|
@@ -112,7 +116,7 @@ The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `
 ### Layout
 
 ```
-main.nf                 workflow and consensus entry point
+main.nf                 pipeline and consensus workflows (--step)
 nextflow.config         parameters, plugins, profiles
 nextflow_schema.json    parameter schema (nf-schema)
 assets/                 samplesheet schema, test samplesheet
@@ -120,7 +124,7 @@ bin/                    subset.py, topometry.py (on PATH inside tasks)
 conf/                   base.config (resources), ucl_myriad.config, test.config
 modules/local/          one process per step
 envs/                   container images and definitions
-scripts/                run_nextflow.sh and the older qsub scripts
+scripts/                run_nextflow.sh (optional wrapper) and the older qsub scripts
 ```
 
 Resources (cpus, total memory, wallclock) are set per label in `conf/base.config`. The Myriad profile divides memory by cpus for the per-core request. Change them there, not in the modules.
