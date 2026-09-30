@@ -40,7 +40,7 @@
                 "stride": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
                 "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" },
                 "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" },
-                "step": { "type": "string", "enum": ["pipeline", "consensus"], "default": "pipeline", "description": "pipeline: subset to combine. consensus: build consensus for --sample after inspecting the k selection plot" }
+                "step": { "type": "string", "enum": ["pipeline", "consensus", "analysis"], "default": "pipeline", "description": "pipeline: subset to combine. consensus: build consensus for --sample after inspecting the k selection plot. analysis: GEP analysis for --sample after consensus" }
             }
         },
         "consensus_options": {
@@ -51,6 +51,23 @@
                 "run_name": { "type": ["string", "null"], "description": "Run name to build consensus for" },
                 "selected_k": { "type": ["integer", "string", "null"], "pattern": "^([2-9]|[1-9]\\d+)$", "minimum": 2, "description": "Chosen number of components (k)" },
                 "threshold": { "type": ["number", "string"], "pattern": "^\\d+(\\.\\d+)?$", "default": 2, "description": "Local density threshold" }
+            }
+        },
+        "analysis_options": {
+            "title": "Analysis options",
+            "type": "object",
+            "description": "For --step analysis (after consensus). Also uses sample, run_name, selected_k and threshold.",
+            "properties": {
+                "gmt": { "type": "string", "format": "file-path", "description": "GO biological process GMT (bin/fetch_resources.py)" },
+                "collectri": { "type": "string", "format": "file-path", "description": "CollecTRI network parquet (bin/fetch_resources.py)" },
+                "projection": { "type": "string", "default": "projection", "description": "obsm key of the embedding to plot on" },
+                "clusters": { "type": "string", "default": "clusters", "description": "obs column with cluster labels" },
+                "age": { "type": "string", "default": "age_pretty", "description": "obs column with age labels" },
+                "summary_cols": { "type": "string", "default": "age_pretty,clusters,ctype_detailed", "description": "Columns for the projection summary; missing ones are skipped" },
+                "usage_cutoff": { "type": ["number", "string"], "pattern": "^\\d+(\\.\\d+)?$", "default": 0.1, "description": "Usage above which a cell counts as using a GEP" },
+                "n_top_genes": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "default": 100, "description": "Top genes saved per GEP" },
+                "geps_per_page": { "type": ["integer", "string"], "pattern": "^\\d+$", "default": 6, "description": "GEPs per page in the multi-GEP figures (0 = one page)" },
+                "formats": { "type": "string", "default": "png,pdf", "description": "Figure formats, comma separated" }
             }
         },
         "institutional_config_options": {
@@ -68,6 +85,7 @@
         { "$ref": "#/$defs/input_output_options" },
         { "$ref": "#/$defs/cnmf_options" },
         { "$ref": "#/$defs/consensus_options" },
+        { "$ref": "#/$defs/analysis_options" },
         { "$ref": "#/$defs/institutional_config_options" }
     ]
 }

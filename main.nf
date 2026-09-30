@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 // cNMF pipeline: subset -> topometry -> prep -> factorize -> combine (+ k selection plot), one chain per samplesheet row.
 //   nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
-// Consensus is a separate step, run after inspecting the k selection plot:
+// Consensus is a separate step, run after inspecting the k selection plot; then --step analysis for the GEP analysis:
 //   nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 
 nextflow.enable.dsl = 2
@@ -14,6 +14,7 @@ include { PREP      } from './modules/local/prep/main'
 include { FACTORIZE } from './modules/local/factorize/main'
 include { COMBINE   } from './modules/local/combine/main'
 include { CONSENSUS } from './modules/local/consensus/main'
+include { ANALYSIS  } from './modules/local/analysis/main'
 
 // nf-schema has already validated the samplesheet (assets/schema_input.json); this turns a row into a meta map.
 // samplesheetToList returns each row as a list in schema property order; empty cells may be null or [].
@@ -116,25 +117,45 @@ workflow pipeline {
 
 }
 
-workflow consensus {
-    if( !params.sample || !params.selected_k )
-        error "Consensus needs --sample and --selected_k (and optionally --run_name, --threshold, --outdir)"
-    // run name defaults to the one PREP recorded for this sample
-    def name_file = file("${params.outdir}/${params.sample}/pipeline_info/run_name.txt")
+// the run name defaults to the one PREP recorded for this sample
+def runNameFor(sample) {
+    def name_file = file("${params.outdir}/${sample}/pipeline_info/run_name.txt")
     def run_name  = params.run_name ?: (name_file.exists() ? name_file.text.trim() : null)
     if( !run_name )
         error "No run name: give --run_name, or check ${name_file} exists (is --outdir the run's results folder?)"
-    CONSENSUS( Channel.of(run_name) )
+    return run_name
+}
+
+workflow consensus {
+    if( !params.sample || !params.selected_k )
+        error "Consensus needs --sample and --selected_k (and optionally --run_name, --threshold, --outdir)"
+    CONSENSUS( Channel.of(runNameFor(params.sample)) )
+}
+
+// after consensus: GEP analysis for one sample (needs the same --selected_k / --threshold as the consensus step)
+workflow analysis {
+    if( !params.sample || !params.selected_k )
+        error "The analysis step needs --sample and --selected_k (and the --threshold used for consensus)"
+    def run_name = runNameFor(params.sample)
+    def sample_dir = "${params.outdir}/${params.sample}"
+    ANALYSIS(
+        Channel.of( tuple(params.sample, run_name, file("${sample_dir}/anndatas/adata_topometry_${params.sample}.h5ad"),
+                          "${file(sample_dir).toAbsolutePath()}/${run_name}") ),
+        file(params.gmt),
+        file(params.collectri)
+    )
 }
 
 workflow {
     validateParameters()
     if( params.step == 'consensus' )
         consensus()
+    else if( params.step == 'analysis' )
+        analysis()
     else if( params.step == 'pipeline' )
         pipeline()
     else
-        error "Unknown --step '${params.step}' (use pipeline or consensus)"
+        error "Unknown --step '${params.step}' (use pipeline, consensus or analysis)"
 
     workflow.onComplete = { appendTraces() }
 }

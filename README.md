@@ -16,6 +16,9 @@ apptainer pull docker://quay.io/biocontainers/cnmf_1.7.1:pyhdfd78af_0 envs/cnmf_
 
 # for running topometry on subset of data
 apptainer build envs/utricle-qc.sif envs/utricle-qc.def
+
+# for the downstream GEP analysis (scanpy, decoupler, seaborn, openpyxl)
+apptainer build envs/cnmf-analysis.sif envs/cnmf-analysis.def
 ```
 
 Install Nextflow (needs Java 11+; see the [nf-core Myriad guide](https://github.com/nf-core/configs/blob/master/docs/ucl_myriad.md)):
@@ -100,6 +103,37 @@ nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260
 
 The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `--run_name` to override it.
 
+### After consensus: GEP analysis
+
+`--step analysis` analyses one sample once consensus has been run: it merges the GEP usages into the topometry AnnData, saves the top genes per GEP, runs GO biological process and CollecTRI enrichment for every GEP (decoupler ULM, once for all GEPs), and makes the figures.
+
+One-off setup, on a machine with internet access (a login node). Compute nodes may not have any, so the analysis reads these files instead of downloading them:
+
+```bash
+singularity exec envs/cnmf-analysis.sif python bin/fetch_resources.py    # writes assets/resources/ (GMT + CollecTRI network)
+```
+
+```bash
+nextflow run main.nf -profile ucl_myriad --step analysis --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
+```
+
+Use the same `--selected_k` and `--threshold` as for consensus. The run name is read from `run_name.txt` as for consensus. Options (defaults in `nextflow.config`): `--projection` (obsm key to plot on), `--clusters` and `--age` (obs columns), `--summary_cols` (columns for the projection summary; missing ones such as `ctype_detailed` are skipped), `--usage_cutoff` (0.1), `--n_top_genes` (100), `--geps_per_page` (6; 0 for one page), `--formats` (`png,pdf`), `--gmt`, `--collectri`.
+
+Outputs go to `{outdir}/{sample}/analysis/`:
+
+```
+csvs/       top100_genes.csv, gsea_gobp.csv, gsea_collectri.csv
+excel/      top100_genes.xlsx, gsea_gobp.xlsx, gsea_collectri.xlsx   (gsea: one sheet per GEP)
+figures/    gep_usage_pct_by_cluster, gep_usage_pct_by_age, gep_usage_heatmap_cluster_age, projection_summary,
+            gep_megaplot_GEP01-06, gep_usage_topgenes_GEP01-06, gep_gobp_GEP01-06, gep_collectri_GEP01-06, ...
+            elements/gep_01_usage, gep_01_gene1..3, gep_01_gobp, gep_01_collectri, ...   (every panel on its own)
+anndatas/   adata_cnmf_{sample}.h5ad                                 (usages in obs, gene scores in varm)
+```
+
+Figures are saved as PNG and PDF (points are rasterised, text stays editable). Gene panels show log-normalised expression (`normalize_total` to 1e4, `log1p`, no scaling) from the raw counts of all genes.
+
+The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb`, using the functions in `bin/gep_lib`, for running or changing any part in a notebook. The analysis is first sized as 2 cpus, 16 GB and 2 h (`conf/base.config`), before being timed on a real run; the run prints the time each stage takes.
+
 ### Outputs
 
 - `results_{date}/{tag}/`: one folder per samplesheet row, holding:
@@ -116,11 +150,12 @@ The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `
 ### Layout
 
 ```
-main.nf                 pipeline and consensus workflows (--step)
+main.nf                 pipeline, consensus and analysis workflows (--step)
 nextflow.config         parameters, plugins, profiles
 nextflow_schema.json    parameter schema (nf-schema)
-assets/                 samplesheet schema, test samplesheet
-bin/                    subset.py, topometry.py (on PATH inside tasks)
+assets/                 samplesheet schema, test samplesheet, resources/ (GMT, CollecTRI; not in git)
+notebooks/              gep_analysis_template.ipynb
+bin/                    subset.py, topometry.py, gep_analysis.py + gep_lib/, fetch_resources.py (on PATH inside tasks)
 conf/                   base.config (resources), ucl_myriad.config, test.config
 modules/local/          one process per step
 envs/                   container images and definitions

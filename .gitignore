@@ -38,3 +38,7 @@ __pycache__/
 
 # local samplesheet for real runs (assets/samplesheet_test.csv is the tracked example)
 /samplesheet.csv
+
+# downloaded reference files (see bin/fetch_resources.py)
+assets/resources/*
+!assets/resources/.gitkeep

@@ -1,0 +1,23 @@
+Bootstrap: docker
+From: mambaorg/micromamba:bookworm-slim
+
+%help
+    Environment for the downstream GEP analysis (bin/gep_analysis.py): scanpy, decoupler, seaborn, openpyxl.
+    Build: apptainer build envs/cnmf-analysis.sif envs/cnmf-analysis.def
+
+%post
+    # procps: Nextflow needs `ps` inside the container
+    apt-get update && apt-get install -y procps
+
+    micromamba create -q -y -p /opt/env -c conda-forge \
+        python=3.12 numpy pandas scipy anndata scanpy matplotlib seaborn openpyxl pyarrow pip
+    # decoupler >= 2 provides dc.mt.ulm / dc.op.collectri used by the notebook
+    /opt/env/bin/pip install --no-cache-dir "decoupler>=2.2,<3"
+    micromamba clean -aqy
+
+%environment
+    export PATH="/opt/env/bin:$PATH"
+    export MPLBACKEND=Agg
+
+%runscript
+    exec "$@"
