@@ -4,7 +4,7 @@
 # starts the Nextflow head process, which submits every other job to SGE itself.
 # Run it from the project root, in tmux/screen on a login node (or as a long, small qsub job if
 # compute nodes may submit jobs), e.g.
-#   mkdir -p results/logs && qsub -o results/logs -e results/logs scripts/run_nextflow.sh ...
+#   mkdir -p logs && qsub -o results/logs -e results/logs scripts/run_nextflow.sh ...
 # Extra arguments go to main.nf; use -entry consensus etc. as arguments.
 
 #$ -l h_rt=48:0:0
@@ -19,6 +19,6 @@ fi
 module load java/temurin-17/17.0.2_8
 export PATH=$PATH:$HOME/bin
 
-mkdir -p results/logs
+mkdir -p logs
 
-nextflow -log results/logs/nextflow.log run main.nf -profile ucl_myriad -resume "$@"
+nextflow -log logs/nextflow.log run main.nf -profile ucl_myriad -resume "$@"

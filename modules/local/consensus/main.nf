@@ -2,9 +2,9 @@
 process CONSENSUS {
     label 'process_medium'
     container "${projectDir}/envs/cnmf_env.sif"
-    tag "${run_name}"
-    publishDir { "${params.outdir}/logs/${task.process}" }, pattern: '.command.{out,err}', mode: 'copy',
-        saveAs: { fn -> "${task.tag}${fn.replace('.command', '')}" }
+    tag "${params.sample}"
+    publishDir { "${params.outdir}/${params.sample}/logs" }, pattern: '.command.{out,err}', mode: 'copy',
+        saveAs: { fn -> "${task.process}${fn.replace('.command', '')}" }
 
     input:
     val run_name
@@ -15,7 +15,7 @@ process CONSENSUS {
     path '.command.err', hidden: true, optional: true
 
     script:
-    def outdir = file(params.outdir).toAbsolutePath()
+    def outdir = file("${params.outdir}/${params.sample}").toAbsolutePath()   // cnmf adds /${run_name}
     """
     (
         flock -x 9

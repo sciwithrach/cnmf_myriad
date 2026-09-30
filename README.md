@@ -64,21 +64,22 @@ anndatas/adata_raw.h5ad,,,"20 30",hvgs.csv,
 
 ```bash
 # from the cnmf directory, e.g. in tmux
-bash scripts/run_nextflow.sh --samplesheet samplesheet.csv --n_iters 200 --outdir results
+bash scripts/run_nextflow.sh --samplesheet samplesheet.csv --n_iters 200
 
 # or directly
-nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200 --outdir results
+nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
 
 # check the setup first with a small run (assets/samplesheet_test.csv, results_test/)
 nextflow run main.nf -profile ucl_myriad,test
 ```
 
-`run_nextflow.sh` loads Java, writes the Nextflow log to `results/logs/nextflow.log` and adds `-resume`, so rerunning the same command after a failure only reruns the missing tasks.
+`run_nextflow.sh` loads Java, writes the Nextflow log to `logs/nextflow.log` and adds `-resume`, so rerunning the same command after a failure only reruns the missing tasks.
 
 | Parameter | Default | Description |
 |---|---|---|
 | `--samplesheet` | none | samplesheet CSV (required) |
-| `--outdir` | `results` | run folders, HVG files and logs |
+| `--outdir` | `results_{run_date}` | one folder per sample (cNMF run, topometry, HVGs, logs) |
+| `--run_date` | today (`YYYYMMDD`) | in the default outdir and run names. Pass the same value (or `--outdir`) when resuming on another day |
 | `--k_vals` | `"20 30 40"` | k for rows with no `k_vals` |
 | `--n_iters` | 100 | iterations per k |
 | `--seed` | 42 | seed for `cnmf prepare` |
@@ -89,15 +90,22 @@ nextflow run main.nf -profile ucl_myriad,test
 Consensus is a separate entry point. Only one consensus step runs per run folder at a time (it writes a cache; the process holds a lock).
 
 ```bash
-nextflow run main.nf -profile ucl_myriad -entry consensus --run_name cnmf_ctype_MEL_20260929 --selected_k 40 --threshold 0.5
+nextflow run main.nf -profile ucl_myriad -entry consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 ```
+
+The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `--run_name` to override it.
 
 ### Outputs
 
-- `results/{run_name}/`: cNMF run folder
-- `results/hvgs_{tag}.csv`, `results/topometry_{tag}/`: HVGs, plots and topometry object (subset rows)
-- `anndatas/adata_{tag}.h5ad`, `anndatas/adata_topometry_{tag}.h5ad`: subset and topometry AnnData (subset rows)
-- `results/logs/{PROCESS}/{tag}.out|err`: task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
+- `results_{date}/{tag}/`: one folder per samplesheet row, holding:
+  - `{run_name}/`: cNMF run folder
+  - `topometry/`: plots and topometry object (subset rows)
+  - `hvgs_{tag}.csv`: HVGs (subset rows)
+  - `logs/{PROCESS}.out|err`: this sample's task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
+  - `pipeline_info/run_name.txt`: the cNMF run name, read by the consensus step
+  - `pipeline_info/trace.txt`: this sample's rows of the run trace
+- `results_{date}/pipeline_info/trace.txt`: trace for the whole run
+- `results_{date}/{tag}/anndatas/`: `adata_{tag}.h5ad` and `adata_topometry_{tag}.h5ad`, the subset and topometry AnnData (subset rows)
 - `work/`: Nextflow working directory, safe to delete after a run finishes
 
 ### Layout

@@ -2,7 +2,7 @@
 // cNMF pipeline: subset -> topometry -> prep -> factorize -> combine (+ k selection plot), one chain per samplesheet row.
 //   nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
 // Consensus is a separate entry point, run after inspecting the k selection plot:
-//   nextflow run main.nf -profile ucl_myriad -entry consensus --run_name cnmf_ctype_MEL_20260929 --selected_k 40 --threshold 0.5
+//   nextflow run main.nf -profile ucl_myriad -entry consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 
 nextflow.enable.dsl = 2
 
@@ -36,6 +36,21 @@ def makeMeta(row) {
         n_jobs   : k_vals.size() * params.n_iters,
         n_chunks : Math.ceil(k_vals.size() * params.n_iters / params.stride) as int
     ]
+}
+
+// Nextflow writes one trace per run; also copy each sample's rows (matched on the tag column) next to its outputs
+def splitTrace() {
+    def trace = file("${params.outdir}/pipeline_info/trace.txt")
+    if( !params.samplesheet || !trace.exists() ) return
+    def lines  = trace.readLines()
+    def tagCol = lines[0].split('\t').toList().indexOf('tag')
+    if( tagCol < 0 ) return
+    samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").each { row ->
+        def m   = makeMeta(row)
+        def out = file("${params.outdir}/${m.tag}/pipeline_info/trace.txt")
+        out.parent.mkdirs()
+        out.text = ([lines[0]] + lines.tail().findAll { it.split('\t', -1)[tagCol] == m.tag }).join('\n') + '\n'
+    }
 }
 
 workflow {
@@ -78,11 +93,18 @@ workflow {
         .map { m -> tuple(groupKey(m.tag, m.n_chunks), m) }
         .groupTuple()
         .map { key, ms -> ms[0] } )
+
+    workflow.onComplete = { splitTrace() }
 }
 
 workflow consensus {
     validateParameters()
-    if( !params.run_name || !params.selected_k )
-        error "Consensus needs --run_name and --selected_k (and optionally --threshold)"
-    CONSENSUS( Channel.of(params.run_name) )
+    if( !params.sample || !params.selected_k )
+        error "Consensus needs --sample and --selected_k (and optionally --run_name, --threshold, --outdir)"
+    // run name defaults to the one PREP recorded for this sample
+    def name_file = file("${params.outdir}/${params.sample}/pipeline_info/run_name.txt")
+    def run_name  = params.run_name ?: (name_file.exists() ? name_file.text.trim() : null)
+    if( !run_name )
+        error "No run name: give --run_name, or check ${name_file} exists (is --outdir the run's results folder?)"
+    CONSENSUS( Channel.of(run_name) )
 }

@@ -2,9 +2,9 @@ process SUBSET {
     label 'process_medium'
     container "${projectDir}/envs/cnmf_env.sif"
     tag "${meta.tag}"
-    publishDir "${projectDir}/anndatas", pattern: 'adata_*.h5ad', mode: 'copy'
-    publishDir { "${params.outdir}/logs/${task.process}" }, pattern: '.command.{out,err}', mode: 'copy',
-        saveAs: { fn -> "${task.tag}${fn.replace('.command', '')}" }
+    publishDir { "${params.outdir}/${task.tag}/anndatas" }, pattern: 'adata_*.h5ad', mode: 'copy'
+    publishDir { "${params.outdir}/${task.tag}/logs" }, pattern: '.command.{out,err}', mode: 'copy',
+        saveAs: { fn -> "${task.process}${fn.replace('.command', '')}" }
 
     input:
     tuple val(meta), path(counts)

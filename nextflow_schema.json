@@ -20,8 +20,8 @@
                 "outdir": {
                     "type": "string",
                     "format": "directory-path",
-                    "default": "${launchDir}/results",
-                    "description": "Output directory for run folders, HVG files and logs"
+                    "default": "${launchDir}/results_<run_date>",
+                    "description": "Output directory; one sample folder per row (cnmf, topometry, hvgs, logs, pipeline_info)"
                 }
             }
         },
@@ -38,13 +38,14 @@
                 },
                 "n_iters": { "type": "integer", "minimum": 1, "default": 100, "description": "Iterations per k" },
                 "stride": { "type": "integer", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
-                "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in default run names. Default: today" }
+                "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" }
             }
         },
         "consensus_options": {
             "title": "Consensus options (-entry consensus)",
             "type": "object",
             "properties": {
+                "sample": { "type": ["string", "null"], "description": "Sample directory under outdir (the row tag, e.g. ctype_MEL)" },
                 "run_name": { "type": ["string", "null"], "description": "Run name to build consensus for" },
                 "selected_k": { "type": ["integer", "null"], "minimum": 2, "description": "Chosen number of components (k)" },
                 "threshold": { "type": "number", "default": 2, "description": "Local density threshold" }

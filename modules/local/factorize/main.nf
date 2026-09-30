@@ -4,8 +4,8 @@ process FACTORIZE {
     label 'process_single'
     container "${projectDir}/envs/cnmf_env.sif"
     tag "${meta.tag}"
-    publishDir { "${params.outdir}/logs/${task.process}" }, pattern: '.command.{out,err}', mode: 'copy',
-        saveAs: { fn -> "${task.tag}.${task.index}${fn.replace('.command', '')}" }
+    publishDir { "${params.outdir}/${task.tag}/logs" }, pattern: '.command.{out,err}', mode: 'copy',
+        saveAs: { fn -> "${task.process}.${task.index}${fn.replace('.command', '')}" }
 
     input:
     tuple val(meta), val(workers)
@@ -16,7 +16,7 @@ process FACTORIZE {
     path '.command.err', hidden: true, optional: true
 
     script:
-    def outdir = file(params.outdir).toAbsolutePath()
+    def outdir = file("${params.outdir}/${meta.tag}").toAbsolutePath()   // cnmf adds /${meta.run_name}
     """
     for i in ${workers.join(' ')}; do
         cnmf factorize \\

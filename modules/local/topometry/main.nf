@@ -3,13 +3,13 @@ process TOPOMETRY {
     container "${projectDir}/envs/utricle-qc.sif"
     containerOptions '--bind /usr/bin/time:/usr/bin/time'   // GNU time is not in the container
     tag "${meta.tag}"
-    publishDir "${projectDir}/anndatas", pattern: 'adata_topometry_*.h5ad', mode: 'copy',
+    publishDir { "${params.outdir}/${task.tag}/anndatas" }, pattern: 'adata_topometry_*.h5ad', mode: 'copy',
         saveAs: { fn -> "adata_topometry_${task.tag}.h5ad" }
-    publishDir "${params.outdir}", pattern: 'hvgs_*.csv', mode: 'copy',
+    publishDir { "${params.outdir}/${task.tag}" }, pattern: 'hvgs_*.csv', mode: 'copy',
         saveAs: { fn -> "hvgs_${task.tag}.csv" }
-    publishDir { "${params.outdir}/topometry_${task.tag}" }, pattern: '{*.png,*.pkl,figures}', mode: 'copy'
-    publishDir { "${params.outdir}/logs/${task.process}" }, pattern: '.command.{out,err}', mode: 'copy',
-        saveAs: { fn -> "${task.tag}${fn.replace('.command', '')}" }
+    publishDir { "${params.outdir}/${task.tag}/topometry" }, pattern: '{*.png,*.pkl,figures}', mode: 'copy'
+    publishDir { "${params.outdir}/${task.tag}/logs" }, pattern: '.command.{out,err}', mode: 'copy',
+        saveAs: { fn -> "${task.process}${fn.replace('.command', '')}" }
 
     input:
     tuple val(meta), path(adata)
