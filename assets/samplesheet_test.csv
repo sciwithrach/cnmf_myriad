@@ -1,3 +1,3 @@
-counts,metadata,subset,k_vals,hvgs,run_name
-anndatas/adata_ctype.h5ad,ctype,MEL,"2 3",,cnmf_test_MEL
-anndatas/adata_ctype.h5ad,ctype,IMM,"2 3",,cnmf_test_IMM
+counts,metadata,subset,k_vals,n_iters,hvgs,run_name
+anndatas/adata_ctype.h5ad,ctype,MEL,"2 3",10,,cnmf_test_MEL
+anndatas/adata_ctype.h5ad,ctype,IMM,"2 3",10,,cnmf_test_IMM

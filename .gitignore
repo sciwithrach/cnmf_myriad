@@ -20,7 +20,6 @@ anndatas/*
 results/*
 results_test/*
 **csv
-!samplesheet.csv
 **h5ad
 
 ############
