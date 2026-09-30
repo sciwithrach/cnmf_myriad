@@ -73,7 +73,7 @@ def percent_above(adata: ad.AnnData, groupby, cutoff: float = 0.1) -> pd.DataFra
     """
     cols = gep_columns(adata)
     keys = [groupby] if isinstance(groupby, str) else list(groupby)
-    frame = adata.obs[keys + cols].copy()
+    frame = sc.get.obs_df(adata, keys=keys + cols)
     for key in keys:
         frame[key] = frame[key].astype(str)
     pct = (frame[cols] > cutoff).groupby([frame[k] for k in keys], observed=True).mean() * 100

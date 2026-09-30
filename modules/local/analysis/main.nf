@@ -35,7 +35,7 @@ process ANALYSIS {
         --projection ${params.projection} \\
         --clusters ${params.clusters} \\
         --age ${params.age} \\
-        --summary_cols ${params.summary_cols} \\
+        ${params.summary_cols ? "--summary_cols ${params.summary_cols}" : ''} \\
         --usage_cutoff ${params.usage_cutoff} \\
         --n_top_genes ${params.n_top_genes} \\
         --geps_per_page ${params.geps_per_page} \\

@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 """Downstream analysis of one cNMF run: merge GEP usages into the AnnData, top genes, GOBP + CollecTRI enrichment,
-and the summary figures. Outputs go to <out>/{csvs,excel,figures,anndatas}/.
+differential expression by cluster (Wilcoxon on log-normalised data), and the summary figures.
+Outputs go to <out>/{csvs,excel,figures,anndatas}/.
 
 Example (test sample):
     gep_analysis.py --adata results_test/ctype_MEL/anndatas/adata_topometry_ctype_MEL.h5ad \\
@@ -18,9 +19,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parent))   # so `gep_lib` import
 
 import anndata as ad
 import matplotlib
-import numpy as np
-import pandas as pd
-import scipy.sparse as sp
+import scanpy as sc
 matplotlib.use('Agg')
 warnings.filterwarnings('ignore', category=FutureWarning, module='scanpy')   # scanpy's own deprecation notices
 
@@ -52,13 +51,16 @@ def parse_args():
 
     o = p.add_argument_group('options')
     o.add_argument('--projection', default='projection', help='obsm key of the embedding to plot on')
-    o.add_argument('--clusters', default='clusters', help='obs column with cluster labels')
+    o.add_argument('--clusters', default='clusters',
+                   help='obs column with the cluster labels to use, e.g. topo_clusters_ms_res0.6 as chosen from clustree.png')
     o.add_argument('--age', default='age_pretty', help='obs column with age labels')
-    o.add_argument('--summary_cols', default='age_pretty,clusters,ctype_detailed',
-                   help='comma-separated obs columns for the projection summary; missing ones are skipped')
+    o.add_argument('--summary_cols', default=None,
+                   help='comma-separated obs columns for the projection summary; missing ones are skipped '
+                        '(default: --age, --clusters and ctype_detailed)')
     o.add_argument('--usage_cutoff', type=float, default=0.1, help='usage above which a cell counts as using a GEP')
     o.add_argument('--min_cells', type=int, default=10, help='smallest cluster x age group shown in the heatmap')
     o.add_argument('--n_top_genes', type=int, default=100, help='genes saved per GEP')
+    o.add_argument('--dge_min_cells', type=int, default=10, help='smallest cluster included in the differential expression')
     o.add_argument('--target_sum', type=float, default=1e4, help='normalize_total target for the gene panels')
     o.add_argument('--top_terms', type=int, default=10, help='gene sets shown per GEP in the bar plots')
     o.add_argument('--pval', type=float, default=0.05, help='keep gene sets with p below this')
@@ -84,6 +86,10 @@ def main():
         usage, scores = gl.load_gep_results(args.run_dir, args.run_name, args.k, args.threshold)
         gl.merge_gep_results(adata, usage, scores, args.run_name, args.k, args.threshold)
         geps = [gl.gep_number(c) for c in gl.gep_columns(adata)]
+        if args.clusters not in adata.obs:
+            candidates = [c for c in adata.obs.columns if 'cluster' in c or 'leiden' in c]
+            raise SystemExit(f'--clusters {args.clusters!r} is not a column of adata.obs. Clustering columns: {candidates}')
+        summary_cols = args.summary_cols.split(',') if args.summary_cols else [args.age, args.clusters, 'ctype_detailed']
 
     with stage('top genes'):
         top = gl.top_genes(scores, args.n_top_genes)
@@ -101,7 +107,7 @@ def main():
             print(f'    {name}: {len(results[name]):,} significant gene sets across {results[name]["gep"].nunique()} GEPs')
 
     with stage('usage summaries'):
-        other = [c for c in args.summary_cols.split(',') if c not in (args.age, args.clusters)]
+        other = [c for c in summary_cols if c not in (args.age, args.clusters)]
         palettes = gl.group_palettes(adata, args.age, args.clusters, other)
         gl.plot_usage_by_cluster(adata, args.clusters, palettes, args.usage_cutoff, figs / 'gep_usage_pct_by_cluster', formats)
         gl.plot_usage_by_age(adata, args.age, palettes, args.usage_cutoff, figs / 'gep_usage_pct_by_age', formats)
@@ -109,17 +115,34 @@ def main():
                                          figs / 'gep_usage_heatmap_cluster_age', formats, args.min_cells)
 
     with stage('projection summary'):
-        gl.plot_projection_summary(adata, args.projection, [c for c in args.summary_cols.split(',') if c],
+        gl.plot_projection_summary(adata, args.projection, summary_cols,
                                    palettes, args.clusters, figs / 'projection_summary', formats)
 
-    with stage('gene expression for the top genes'):
-        # scanpy's standard normalize_total + log1p (no scaling), from the raw counts of ALL genes, for the plotted genes only
-        genes = list(dict.fromkeys(g for gep in top.columns for g in top[gep].iloc[:3]))
-        total = np.asarray(adata.raw.X.sum(axis=1)).ravel()                  # each cell's counts over all genes
-        counts = adata.raw[:, genes].X
-        counts = counts.toarray() if sp.issparse(counts) else counts
-        expr = ad.AnnData(np.log1p(counts / total[:, None] * args.target_sum), obs=adata.obs,
-                          var=pd.DataFrame(index=genes), obsm={args.projection: adata.obsm[args.projection]})
+    with stage('log-normalised expression'):
+        # raw counts of all genes -> genes found in >= 3 cells (as for cNMF) -> normalise -> log1p, no scaling
+        logn = adata.raw.to_adata()
+        logn.uns.pop('log1p', None)       # the counts are not log-transformed; drop the flag copied from adata
+        sc.pp.filter_genes(logn, min_cells=3)
+        sc.pp.normalize_total(logn, target_sum=args.target_sum)
+        sc.pp.log1p(logn)
+
+        # the top genes for the gene panels
+        genes = [g for g in dict.fromkeys(top.iloc[:3].to_numpy().ravel()) if g in logn.var_names]
+        expr = logn[:, genes].copy()
+
+    with stage('differential expression by cluster'):
+        # Wilcoxon rank-sum with tie correction, each cluster against all other cells, on the log-normalised data
+        logn.obs[args.clusters] = logn.obs[args.clusters].astype(str).astype('category')
+        sizes = logn.obs[args.clusters].value_counts()
+        groups = list(sizes.index[sizes >= args.dge_min_cells])
+        if len(groups) < 2:      # a cluster cannot be compared with the rest if it is the only one
+            print(f'WARNING: {len(groups)} cluster(s) with >= {args.dge_min_cells} cells; differential expression skipped')
+        else:
+            sc.tl.rank_genes_groups(logn, groupby=args.clusters, groups=groups, method='wilcoxon', tie_correct=True, pts=True)
+            dge = sc.get.rank_genes_groups_df(logn, group=None)      # group, names, scores, logfoldchanges, pvals, pvals_adj, pts, pts_rest
+            dge.to_csv(csvs / 'dge_by_cluster.csv', index=False)
+            print(f'    {len(groups)} clusters, {len(dge):,} rows; skipped clusters with < {args.dge_min_cells} cells: '
+                  f'{sorted(set(sizes.index) - set(groups))}')
 
     pages = gl.page_ranges(geps, args.geps_per_page)
     layouts = {'gep_megaplot': gl.MEGAPLOT, 'gep_usage_topgenes': gl.USAGE_GENES,
