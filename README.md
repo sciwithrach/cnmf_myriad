@@ -79,7 +79,9 @@ nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv -resume
 nextflow run main.nf -profile ucl_myriad,test
 ```
 
-- `-resume` continues the latest run in this directory. To continue a specific one, give its name: `-resume jovial_goldberg` (`nextflow log` lists the run names). Without `-resume`, a run starts from scratch.
+- `-resume` continues the **latest** run in this directory. Without it, a run starts from scratch. Every `nextflow` command that starts a run counts as the latest run, including `-preview` and test-profile runs, so a bare `-resume` after one of those finds nothing cached and reruns everything.
+- To continue a specific run, give its **session ID**, not its run name: `-resume 1f50da21-e19b-452b-ba34-87c375069c28`. `-resume` only takes `last` or a full session ID (this is how the launcher parses it in Nextflow 26.04): a run name is silently ignored, and the bare `-resume` resumes the latest run instead. Find the ID in the second-to-last column of `nextflow log` (for example `nextflow log | grep <run name>`); `nextflow log <run name> -f session` works too, but not while that session is running. A double dash (`--resume`) is a pipeline parameter and does nothing.
+- Do not resume a run while one of its SGE jobs is still running (`qstat`), or a second copy of that task starts in the same work directory.
 - `conf/base.config` (resources) is always loaded; `-profile ucl_myriad` adds the SGE executor and singularity settings.
 - `scripts/run_nextflow.sh` is an optional wrapper that loads Java, writes the Nextflow log to `logs/nextflow.log`, and always adds `-profile ucl_myriad` and `-resume`. It can also be submitted as a job (`qsub scripts/run_nextflow.sh --samplesheet samplesheet.csv`) if compute nodes are allowed to submit jobs.
 
