@@ -36,3 +36,6 @@ work/
 ##########
 
 __pycache__/
+
+# local samplesheet for real runs (assets/samplesheet_test.csv is the tracked example)
+/samplesheet.csv
