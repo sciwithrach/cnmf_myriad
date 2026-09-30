@@ -87,10 +87,10 @@ nextflow run main.nf -profile ucl_myriad,test
 
 ### After k plot inspection: consensus
 
-Consensus is a separate entry point. Only one consensus step runs per run folder at a time (it writes a cache; the process holds a lock).
+Consensus is a separate step (`--step consensus`). Only one consensus step runs per run folder at a time (it writes a cache; the process holds a lock).
 
 ```bash
-nextflow run main.nf -profile ucl_myriad -entry consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
+nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 ```
 
 The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `--run_name` to override it.
@@ -103,7 +103,7 @@ The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `
   - `hvgs_{tag}.csv`: HVGs (subset rows)
   - `logs/{PROCESS}.out|err`: this sample's task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
   - `pipeline_info/run_name.txt`: the cNMF run name, read by the consensus step
-  - `pipeline_info/trace.txt`: this sample's trace rows, appended after every run
+  - `pipeline_info/trace.txt`: this sample's trace rows, appended after every run (including consensus)
 - `results_{date}/pipeline_info/trace.txt`: trace rows for all runs into this folder, appended after each; `trace_{timestamp}.txt` is Nextflow's raw trace for a single run
 - `results_{date}/{tag}/anndatas/`: `adata_{tag}.h5ad` and `adata_topometry_{tag}.h5ad`, the subset and topometry AnnData (subset rows)
 - `work/`: Nextflow working directory, safe to delete after a run finishes

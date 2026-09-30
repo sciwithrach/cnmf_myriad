@@ -1,8 +1,8 @@
 #!/usr/bin/env nextflow
 // cNMF pipeline: subset -> topometry -> prep -> factorize -> combine (+ k selection plot), one chain per samplesheet row.
 //   nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
-// Consensus is a separate entry point, run after inspecting the k selection plot:
-//   nextflow run main.nf -profile ucl_myriad -entry consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
+// Consensus is a separate step, run after inspecting the k selection plot:
+//   nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 
 nextflow.enable.dsl = 2
 
@@ -33,8 +33,8 @@ def makeMeta(row) {
         hvgs     : hvgs ? file(hvgs) : null,
         k_vals   : k_vals,
         run_name : run_name ?: "cnmf_${tag}_${params.run_date}",
-        n_jobs   : k_vals.size() * params.n_iters,
-        n_chunks : Math.ceil(k_vals.size() * params.n_iters / params.stride) as int
+        n_jobs   : k_vals.size() * (params.n_iters as int),     // CLI values arrive as strings
+        n_chunks : Math.ceil(k_vals.size() * (params.n_iters as int) / (params.stride as int)) as int
     ]
 }
 
@@ -55,14 +55,16 @@ def appendTraces() {
     if( lines.size() < 2 || tagCol < 0 ) return
     def rows = lines.tail()
     appendRows(file("${params.outdir}/pipeline_info/trace.txt"), lines[0], rows)
-    samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").collect { row -> makeMeta(row).tag }.each { tag ->
+    def tags = params.step == 'consensus'
+        ? [params.sample]
+        : samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").collect { row -> makeMeta(row).tag }
+    tags.each { tag ->
         appendRows(file("${params.outdir}/${tag}/pipeline_info/trace.txt"), lines[0],
                    rows.findAll { it.split('\t', -1)[tagCol] == tag })
     }
 }
 
-workflow {
-    validateParameters()
+workflow pipeline {
     if( !params.samplesheet )
         error "Give a samplesheet with --samplesheet"
 
@@ -110,11 +112,9 @@ workflow {
         .groupTuple()
         .map { key, ms -> ms[0] } )
 
-    workflow.onComplete = { appendTraces() }
 }
 
 workflow consensus {
-    validateParameters()
     if( !params.sample || !params.selected_k )
         error "Consensus needs --sample and --selected_k (and optionally --run_name, --threshold, --outdir)"
     // run name defaults to the one PREP recorded for this sample
@@ -123,4 +123,16 @@ workflow consensus {
     if( !run_name )
         error "No run name: give --run_name, or check ${name_file} exists (is --outdir the run's results folder?)"
     CONSENSUS( Channel.of(run_name) )
+}
+
+workflow {
+    validateParameters()
+    if( params.step == 'consensus' )
+        consensus()
+    else if( params.step == 'pipeline' )
+        pipeline()
+    else
+        error "Unknown --step '${params.step}' (use pipeline or consensus)"
+
+    workflow.onComplete = { appendTraces() }
 }

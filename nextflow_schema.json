@@ -29,17 +29,18 @@
             "title": "cNMF options",
             "type": "object",
             "properties": {
-                "seed": { "type": "integer", "default": 42, "description": "Random seed for cnmf prepare" },
+                "seed": { "type": ["integer", "string"], "pattern": "^\\d+$", "default": 42, "description": "Random seed for cnmf prepare" },
                 "k_vals": {
                     "type": "string",
                     "default": "20 30 40",
                     "pattern": "^\\d+([ ;]+\\d+)*$",
                     "description": "Default components (k) for rows with no k_vals in the samplesheet"
                 },
-                "n_iters": { "type": "integer", "minimum": 1, "default": 100, "description": "Iterations per k" },
-                "stride": { "type": "integer", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
+                "n_iters": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 100, "description": "Iterations per k" },
+                "stride": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
                 "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" },
-                "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" }
+                "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" },
+                "step": { "type": "string", "enum": ["pipeline", "consensus"], "default": "pipeline", "description": "pipeline: subset to combine. consensus: build consensus for --sample after inspecting the k selection plot" }
             }
         },
         "consensus_options": {
@@ -48,8 +49,8 @@
             "properties": {
                 "sample": { "type": ["string", "null"], "description": "Sample directory under outdir (the row tag, e.g. ctype_MEL)" },
                 "run_name": { "type": ["string", "null"], "description": "Run name to build consensus for" },
-                "selected_k": { "type": ["integer", "null"], "minimum": 2, "description": "Chosen number of components (k)" },
-                "threshold": { "type": "number", "default": 2, "description": "Local density threshold" }
+                "selected_k": { "type": ["integer", "string", "null"], "pattern": "^([2-9]|[1-9]\\d+)$", "minimum": 2, "description": "Chosen number of components (k)" },
+                "threshold": { "type": ["number", "string"], "pattern": "^\\d+(\\.\\d+)?$", "default": 2, "description": "Local density threshold" }
             }
         },
         "institutional_config_options": {
