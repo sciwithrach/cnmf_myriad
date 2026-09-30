@@ -38,18 +38,26 @@ def makeMeta(row) {
     ]
 }
 
-// Nextflow writes one trace per run; also copy each sample's rows (matched on the tag column) next to its outputs
-def splitTrace() {
-    def trace = file("${params.outdir}/pipeline_info/trace.txt")
-    if( !params.samplesheet || !trace.exists() ) return
-    def lines  = trace.readLines()
+// Nextflow cannot append to a trace, so each run writes its own trace_<stamp>.txt and its rows are appended
+// here to the run-wide pipeline_info/trace.txt and, matched on the tag column, to each sample's own trace.txt
+def appendRows(f, header, rows) {
+    if( !rows ) return
+    f.parent.mkdirs()
+    if( !f.exists() ) f.append(header + '\n')
+    f.append(rows.join('\n') + '\n')
+}
+
+def appendTraces() {
+    def raw = file("${params.outdir}/pipeline_info/trace_${params.trace_stamp}.txt")
+    if( !raw.exists() ) return
+    def lines  = raw.readLines()
     def tagCol = lines[0].split('\t').toList().indexOf('tag')
-    if( tagCol < 0 ) return
-    samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").each { row ->
-        def m   = makeMeta(row)
-        def out = file("${params.outdir}/${m.tag}/pipeline_info/trace.txt")
-        out.parent.mkdirs()
-        out.text = ([lines[0]] + lines.tail().findAll { it.split('\t', -1)[tagCol] == m.tag }).join('\n') + '\n'
+    if( lines.size() < 2 || tagCol < 0 ) return
+    def rows = lines.tail()
+    appendRows(file("${params.outdir}/pipeline_info/trace.txt"), lines[0], rows)
+    samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").collect { row -> makeMeta(row).tag }.each { tag ->
+        appendRows(file("${params.outdir}/${tag}/pipeline_info/trace.txt"), lines[0],
+                   rows.findAll { it.split('\t', -1)[tagCol] == tag })
     }
 }
 
@@ -94,7 +102,7 @@ workflow {
         .groupTuple()
         .map { key, ms -> ms[0] } )
 
-    workflow.onComplete = { splitTrace() }
+    workflow.onComplete = { appendTraces() }
 }
 
 workflow consensus {

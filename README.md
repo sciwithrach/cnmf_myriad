@@ -103,8 +103,8 @@ The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `
   - `hvgs_{tag}.csv`: HVGs (subset rows)
   - `logs/{PROCESS}.out|err`: this sample's task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
   - `pipeline_info/run_name.txt`: the cNMF run name, read by the consensus step
-  - `pipeline_info/trace.txt`: this sample's rows of the run trace
-- `results_{date}/pipeline_info/trace.txt`: trace for the whole run
+  - `pipeline_info/trace.txt`: this sample's trace rows, appended after every run
+- `results_{date}/pipeline_info/trace.txt`: trace rows for all runs into this folder, appended after each; `trace_{timestamp}.txt` is Nextflow's raw trace for a single run
 - `results_{date}/{tag}/anndatas/`: `adata_{tag}.h5ad` and `adata_topometry_{tag}.h5ad`, the subset and topometry AnnData (subset rows)
 - `work/`: Nextflow working directory, safe to delete after a run finishes
 

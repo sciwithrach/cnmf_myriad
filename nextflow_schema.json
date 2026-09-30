@@ -38,7 +38,8 @@
                 },
                 "n_iters": { "type": "integer", "minimum": 1, "default": 100, "description": "Iterations per k" },
                 "stride": { "type": "integer", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
-                "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" }
+                "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" },
+                "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" }
             }
         },
         "consensus_options": {
