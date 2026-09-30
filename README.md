@@ -141,7 +141,10 @@ figures/    gep_usage_pct_by_cluster, gep_usage_pct_by_age, gep_usage_heatmap_cl
             gep_megaplot_GEP01-06, gep_usage_topgenes_GEP01-06, gep_gobp_GEP01-06, gep_collectri_GEP01-06, ...
             elements/gep_01_usage, gep_01_gene1..3, gep_01_gobp, gep_01_collectri, ...   (every panel on its own)
 anndatas/   adata_cnmf_{sample}.h5ad                                 (usages in obs, gene scores in varm)
+analysis_call.txt, analysis_call.json                                  (how it was run: see below)
 ```
+
+`analysis_call.txt` (to read) and `analysis_call.json` (to parse) record the call, so the settings behind any figure or CSV sit next to it: the `nextflow run` command, run name and session ID when it was run through `--step analysis`; the `gep_analysis.py` command with every option and default written out (and as typed); the input files with their paths, sizes and dates; and the versions of Python, scanpy, anndata, decoupler and the other packages. It is written at the start, so it is there even if the run fails, and a rerun for the same sample replaces it (as it replaces the other outputs). The notebook template writes the same record.
 
 Figures are saved as PNG and PDF (points are rasterised, text stays editable). Gene panels and the differential expression use log-normalised expression from the raw counts of all genes: genes found in at least 3 cells are kept first, then `normalize_total` (to 1e4) and `log1p`, with no scaling. `dge_by_cluster.csv` has each cluster against all other cells (`rank_genes_groups`, Wilcoxon with `tie_correct=True`): group, gene, score, log fold change, p-value, adjusted p-value and the fraction of cells expressing it in the cluster and in the rest. Clusters with fewer than 10 cells are left out (`--dge_min_cells` on the command line script), and the step is skipped if fewer than two clusters remain.
 

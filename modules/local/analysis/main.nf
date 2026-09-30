@@ -22,6 +22,16 @@ process ANALYSIS {
     # matplotlib / numba want writable cache folders; the container's home may not be
     export MPLCONFIGDIR=\$PWD/.matplotlib NUMBA_CACHE_DIR=\$PWD/.numba
 
+    # what started this run, for the call record written next to the outputs
+    cat > nextflow_info.txt <<'NXF_INFO'
+command: ${workflow.commandLine}
+run name: ${workflow.runName}
+session id: ${workflow.sessionId}
+script revision: ${workflow.scriptId}
+launch directory: ${workflow.launchDir}
+project directory: ${workflow.projectDir}
+NXF_INFO
+
     gep_analysis.py \\
         --adata ${adata} \\
         --run_dir ${run_dir} \\
@@ -39,6 +49,7 @@ process ANALYSIS {
         --usage_cutoff ${params.usage_cutoff} \\
         --n_top_genes ${params.n_top_genes} \\
         --geps_per_page ${params.geps_per_page} \\
-        --formats ${params.formats}
+        --formats ${params.formats} \\
+        --nextflow_info nextflow_info.txt
     """
 }

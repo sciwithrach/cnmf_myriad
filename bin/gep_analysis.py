@@ -9,6 +9,7 @@ Example (test sample):
         --sample ctype_MEL --out results_test/ctype_MEL/analysis
 """
 import argparse
+import shlex
 import sys
 import warnings
 import time
@@ -68,6 +69,7 @@ def parse_args():
     o.add_argument('--formats', default='png,pdf', help='comma-separated figure formats')
     o.add_argument('--dpi', type=int, default=300)
     o.add_argument('--no_elements', action='store_true', help='skip the single-panel element figures')
+    o.add_argument('--nextflow_info', default=None, help='text file describing the Nextflow run (key: value lines), added to the call record')
     return p.parse_args()
 
 
@@ -79,6 +81,11 @@ def main():
         d.mkdir(parents=True, exist_ok=True)
     formats = [f.strip() for f in args.formats.split(',') if f.strip()]
     gl.set_publication_style(args.dpi)
+
+    # record how this was run before doing anything else, so it is there even if a later step fails
+    gl.write_call_record(out, 'gep_analysis.py', {k: v for k, v in vars(args).items() if k != 'nextflow_info'},
+                         inputs={'adata': args.adata, 'run_dir': args.run_dir, 'gmt': args.gmt, 'collectri': args.collectri},
+                         typed=shlex.join(['gep_analysis.py'] + sys.argv[1:]), nextflow_info=args.nextflow_info)
     t0 = time.time()
 
     with stage('load and merge'):
