@@ -95,6 +95,15 @@ nextflow run main.nf -profile ucl_myriad,test
 | `--seed` | 42 | seed for `cnmf prepare` |
 | `--stride` | 10 | factorize workers per SGE task |
 
+### Cluster stability (clustree)
+
+For rows that go through topometry, the pipeline also draws two plots per sample, into `{outdir}/{tag}/clustering/`. They only need the topometry AnnData, so they start as soon as topometry has finished (listed last in `main.nf`, so resuming an earlier run only adds them):
+
+- `clustree.png`: cluster stability across the six Leiden resolutions (0.2 to 1.2), from `bin/clustree.R` (container `envs/clustree.sif`: `apptainer build envs/clustree.sif envs/clustree.def`).
+- `cluster_comparison_on_embedding.png`: the projection coloured by `--cluster_color` (default `ctype`; skipped if the column is missing) and by every resolution, from `bin/cluster_compare.py`.
+
+The series follows the latent space topometry chose (`adata.uns['basis']`): `topo_clusters_ms_res*` for a multiscale spectral basis, `topo_clusters_res*` for a spectral one, otherwise `pca_leiden_res*`. Within a subset every cell has the same `ctype`, so that panel is one colour; use `--cluster_color clusters` to compare against the earlier cluster labels instead.
+
 ### After k plot inspection: consensus
 
 Consensus is a separate step (`--step consensus`). Only one consensus step runs per run folder at a time (it writes a cache; the process holds a lock).
@@ -107,7 +116,7 @@ The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `
 
 ### After consensus: GEP analysis
 
-`--step analysis` analyses one sample once consensus has been run: it merges the GEP usages into the topometry AnnData, saves the top genes per GEP, runs GO biological process and CollecTRI enrichment for every GEP (decoupler ULM, once for all GEPs), and makes the figures.
+`--step analysis` analyses one sample once consensus has been run: it merges the GEP usages into the topometry AnnData, saves the top genes per GEP, runs GO biological process and CollecTRI enrichment for every GEP (decoupler ULM, once for all GEPs), tests differential expression by cluster, and makes the figures.
 
 One-off setup, on a machine with internet access (a login node). Compute nodes may not have any, so the analysis reads these files instead of downloading them:
 
@@ -116,15 +125,17 @@ singularity exec envs/cnmf-analysis.sif python bin/fetch_resources.py    # write
 ```
 
 ```bash
-nextflow run main.nf -profile ucl_myriad --step analysis --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
+nextflow run main.nf -profile ucl_myriad --step analysis --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5 --clusters topo_clusters_ms_res0.6
 ```
 
-Use the same `--selected_k` and `--threshold` as for consensus. The run name is read from `run_name.txt` as for consensus. Options (defaults in `nextflow.config`): `--projection` (obsm key to plot on), `--clusters` and `--age` (obs columns), `--summary_cols` (columns for the projection summary; missing ones such as `ctype_detailed` are skipped), `--usage_cutoff` (0.1), `--n_top_genes` (100), `--geps_per_page` (6; 0 for one page), `--formats` (`png,pdf`), `--gmt`, `--collectri`.
+`--clusters` is the obs column with the cluster labels to use. Choose it from the clustree plot (`clustering/clustree.png`), e.g. `topo_clusters_ms_res0.6`; the default is the `clusters` column. It is used for the usage-by-cluster plots, the projection summary and the differential expression, and the run stops at the start with the list of clustering columns if the name is not in the AnnData.
+
+Use the same `--selected_k` and `--threshold` as for consensus. The run name is read from `run_name.txt` as for consensus. Options (defaults in `nextflow.config`): `--projection` (obsm key to plot on), `--age` (obs column), `--summary_cols` (columns for the projection summary; default age, clusters and `ctype_detailed`, and missing ones are skipped), `--usage_cutoff` (0.1), `--n_top_genes` (100), `--geps_per_page` (6; 0 for one page), `--formats` (`png,pdf`), `--gmt`, `--collectri`.
 
 Outputs go to `{outdir}/{sample}/analysis/`:
 
 ```
-csvs/       top100_genes.csv, gsea_gobp.csv, gsea_collectri.csv
+csvs/       top100_genes.csv, gsea_gobp.csv, gsea_collectri.csv, dge_by_cluster.csv
 excel/      top100_genes.xlsx, gsea_gobp.xlsx, gsea_collectri.xlsx   (gsea: one sheet per GEP)
 figures/    gep_usage_pct_by_cluster, gep_usage_pct_by_age, gep_usage_heatmap_cluster_age, projection_summary,
             gep_megaplot_GEP01-06, gep_usage_topgenes_GEP01-06, gep_gobp_GEP01-06, gep_collectri_GEP01-06, ...
@@ -132,7 +143,7 @@ figures/    gep_usage_pct_by_cluster, gep_usage_pct_by_age, gep_usage_heatmap_cl
 anndatas/   adata_cnmf_{sample}.h5ad                                 (usages in obs, gene scores in varm)
 ```
 
-Figures are saved as PNG and PDF (points are rasterised, text stays editable). Gene panels show log-normalised expression (`normalize_total` to 1e4, `log1p`, no scaling) from the raw counts of all genes.
+Figures are saved as PNG and PDF (points are rasterised, text stays editable). Gene panels and the differential expression use log-normalised expression from the raw counts of all genes: genes found in at least 3 cells are kept first, then `normalize_total` (to 1e4) and `log1p`, with no scaling. `dge_by_cluster.csv` has each cluster against all other cells (`rank_genes_groups`, Wilcoxon with `tie_correct=True`): group, gene, score, log fold change, p-value, adjusted p-value and the fraction of cells expressing it in the cluster and in the rest. Clusters with fewer than 10 cells are left out (`--dge_min_cells` on the command line script), and the step is skipped if fewer than two clusters remain.
 
 The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb`, using the functions in `bin/gep_lib`, for running or changing any part in a notebook. The analysis is first sized as 2 cpus, 16 GB and 2 h (`conf/base.config`), before being timed on a real run; the run prints the time each stage takes.
 
@@ -142,6 +153,7 @@ The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb
   - `{run_name}/`: cNMF run folder
   - `topometry/`: plots and topometry object (subset rows)
   - `hvgs_{tag}.csv`: HVGs (subset rows)
+  - `clustering/`: `clustree.png` and `cluster_comparison_on_embedding.png` (subset rows)
   - `logs/{PROCESS}.out|err`: this sample's task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
   - `pipeline_info/run_name.txt`: the cNMF run name, read by the consensus step
   - `pipeline_info/trace.txt`: this sample's trace rows, appended after every run (including consensus)
@@ -157,7 +169,7 @@ nextflow.config         parameters, plugins, profiles
 nextflow_schema.json    parameter schema (nf-schema)
 assets/                 samplesheet schema, test samplesheet, resources/ (GMT, CollecTRI; not in git)
 notebooks/              gep_analysis_template.ipynb
-bin/                    subset.py, topometry.py, gep_analysis.py + gep_lib/, fetch_resources.py (on PATH inside tasks)
+bin/                    subset.py, topometry.py, cluster_compare.py, clustree.R, gep_analysis.py + gep_lib/, fetch_resources.py (on PATH inside tasks)
 conf/                   base.config (resources), ucl_myriad.config, test.config
 modules/local/          one process per step
 envs/                   container images and definitions

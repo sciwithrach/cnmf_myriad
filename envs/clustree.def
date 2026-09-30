@@ -1,0 +1,18 @@
+Bootstrap: docker
+From: rocker/r-ver:4.4.3
+
+%help
+    R environment for the cluster stability plot (bin/clustree.R): clustree, ggplot2, ggraph.
+    Build: apptainer build envs/clustree.sif envs/clustree.def
+
+%post
+    # procps: Nextflow needs `ps` inside the container; the -dev packages are for igraph/ggraph/ragg
+    apt-get update && apt-get install -y procps libglpk-dev libxml2-dev libcurl4-openssl-dev libssl-dev \
+        libpng-dev libjpeg-dev libtiff5-dev libfontconfig1-dev libharfbuzz-dev libfribidi-dev libfreetype6-dev
+
+    # clustree accepts a plain data frame, so no Bioconductor / anndataR is needed
+    Rscript -e "install.packages(c('clustree', 'ragg'))"
+    Rscript -e "stopifnot(requireNamespace('clustree', quietly = TRUE))"
+
+%runscript
+    exec "$@"

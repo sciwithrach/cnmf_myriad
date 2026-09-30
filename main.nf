@@ -15,6 +15,8 @@ include { FACTORIZE } from './modules/local/factorize/main'
 include { COMBINE   } from './modules/local/combine/main'
 include { CONSENSUS } from './modules/local/consensus/main'
 include { ANALYSIS  } from './modules/local/analysis/main'
+include { CLUSTER_COMPARE } from './modules/local/cluster_compare/main'
+include { CLUSTREE  } from './modules/local/clustree/main'
 
 // nf-schema has already validated the samplesheet (assets/schema_input.json); this turns a row into a meta map.
 // samplesheetToList returns each row as a list in schema property order; empty cells may be null or [].
@@ -115,6 +117,10 @@ workflow pipeline {
         .groupTuple()
         .map { key, ms -> ms[0] } )
 
+    // cluster comparison plots and clustree: they only need the topometry AnnData, so they start as soon as it exists
+    // and are listed last so that a resume of an earlier run only adds them
+    CLUSTER_COMPARE( TOPOMETRY.out.adata )
+    CLUSTREE( CLUSTER_COMPARE.out.table )
 }
 
 // the run name defaults to the one PREP recorded for this sample

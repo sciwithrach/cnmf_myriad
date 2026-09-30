@@ -16,7 +16,7 @@ process TOPOMETRY {
 
     output:
     tuple val(meta), path("counts_${meta.subset}.h5ad"), path("hvgs_${meta.subset}.csv"), emit: res
-    path "adata_topometry_${meta.subset}.h5ad"
+    tuple val(meta), path("adata_topometry_${meta.subset}.h5ad"), emit: adata
     path '*.png', optional: true
     path '*.pkl', optional: true
     path 'figures', optional: true
