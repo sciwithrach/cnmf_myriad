@@ -74,6 +74,11 @@ def run_topometry(adata_path, descriptor, npcs=30):
 	# preprocess not to overwrite it
 	adata.raw = adata.copy()
 
+	# drop genes expressed in fewer than 3 cells (.raw keeps all genes) -- the
+	# seurat_v3 HVG loess fit fails on very sparse subsets
+	sc.pp.filter_genes(adata, min_cells=3)
+	print(f'{adata_path}: n_genes after filtering = {adata.n_vars:,}')
+
 	# run standard pre-processing
 	adata = tp.sc.preprocess(adata, save_to_raw=False)
 
@@ -218,6 +223,11 @@ def main():
 
 	# plot comparisons
 	plot_comparisons(adata, args.descriptor, args.metadata)
+
+	# save the full raw count matrix (genes in >= 3 cells) for cnmf -- X of the topometry adata is scaled
+	counts = adata.raw.to_adata()
+	sc.pp.filter_genes(counts, min_cells=3)
+	counts.write(f'counts_{args.descriptor}.h5ad')
 
 	# save adata
 	adata.write(f'adata_topometry_{args.descriptor}.h5ad')

@@ -1,0 +1,70 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/OWNER/cnmf/main/nextflow_schema.json",
+    "title": "cNMF pipeline parameters",
+    "description": "cNMF on UCL Myriad: subset -> topometry -> prep -> factorize -> combine, with consensus as a separate entry point",
+    "type": "object",
+    "$defs": {
+        "input_output_options": {
+            "title": "Input/output options",
+            "type": "object",
+            "properties": {
+                "samplesheet": {
+                    "type": ["string", "null"],
+                    "format": "file-path",
+                    "exists": true,
+                    "schema": "assets/schema_input.json",
+                    "pattern": "^\\S+\\.csv$",
+                    "description": "CSV samplesheet, one row per run (counts, metadata, subset, k_vals, hvgs, run_name)"
+                },
+                "outdir": {
+                    "type": "string",
+                    "format": "directory-path",
+                    "default": "${launchDir}/results",
+                    "description": "Output directory for run folders, HVG files and logs"
+                }
+            }
+        },
+        "cnmf_options": {
+            "title": "cNMF options",
+            "type": "object",
+            "properties": {
+                "seed": { "type": "integer", "default": 42, "description": "Random seed for cnmf prepare" },
+                "k_vals": {
+                    "type": "string",
+                    "default": "20 30 40",
+                    "pattern": "^\\d+([ ;]+\\d+)*$",
+                    "description": "Default components (k) for rows with no k_vals in the samplesheet"
+                },
+                "n_iters": { "type": "integer", "minimum": 1, "default": 100, "description": "Iterations per k" },
+                "stride": { "type": "integer", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
+                "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in default run names. Default: today" }
+            }
+        },
+        "consensus_options": {
+            "title": "Consensus options (-entry consensus)",
+            "type": "object",
+            "properties": {
+                "run_name": { "type": ["string", "null"], "description": "Run name to build consensus for" },
+                "selected_k": { "type": ["integer", "null"], "minimum": 2, "description": "Chosen number of components (k)" },
+                "threshold": { "type": "number", "default": 2, "description": "Local density threshold" }
+            }
+        },
+        "institutional_config_options": {
+            "title": "Institutional config options",
+            "type": "object",
+            "hidden": true,
+            "properties": {
+                "config_profile_description": { "type": "string", "hidden": true },
+                "config_profile_contact": { "type": "string", "hidden": true },
+                "config_profile_url": { "type": "string", "hidden": true }
+            }
+        }
+    },
+    "allOf": [
+        { "$ref": "#/$defs/input_output_options" },
+        { "$ref": "#/$defs/cnmf_options" },
+        { "$ref": "#/$defs/consensus_options" },
+        { "$ref": "#/$defs/institutional_config_options" }
+    ]
+}

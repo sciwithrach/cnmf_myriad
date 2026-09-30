@@ -38,7 +38,7 @@ echo "Subset:                           $SUBSET"
 echo "Path to output directory:         $OUTDIR"
 
 # run script
-/usr/bin/time --verbose apptainer run envs/cnmf_env.sif python scripts/subset.py \
+/usr/bin/time --verbose apptainer run envs/cnmf_env.sif python bin/subset.py \
 	--counts $COUNTS \
 	--metadata $METADATA \
 	--subset $SUBSET \

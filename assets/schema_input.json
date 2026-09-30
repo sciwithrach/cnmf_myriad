@@ -1,0 +1,67 @@
+{
+    "$schema": "https://json-schema.org/draft/2020-12/schema",
+    "$id": "https://raw.githubusercontent.com/OWNER/cnmf/main/assets/schema_input.json",
+    "title": "cNMF pipeline - samplesheet",
+    "description": "One row per cNMF run. Give metadata + subset to subset the counts and select HVGs with topometry, or give hvgs to start from prep.",
+    "type": "array",
+    "items": {
+        "type": "object",
+        "properties": {
+            "counts": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "pattern": "^\\S+\\.h5ad$",
+                "description": "AnnData (.h5ad) with raw counts",
+                "errorMessage": "counts must be an existing .h5ad file with no spaces in its path"
+            },
+            "metadata": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "description": "obs column to subset by, e.g. ctype",
+                "errorMessage": "metadata must be a single obs column name with no spaces"
+            },
+            "subset": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "description": "Value of the metadata column to keep, e.g. MEL",
+                "errorMessage": "subset must be a single value with no spaces"
+            },
+            "k_vals": {
+                "type": "string",
+                "pattern": "^\\d+([ ;]+\\d+)*$",
+                "description": "Numbers of components (k), separated by spaces or ';'. Default: --k_vals",
+                "errorMessage": "k_vals must be whole numbers separated by spaces or ';', e.g. \"20 30 40\""
+            },
+            "hvgs": {
+                "type": "string",
+                "format": "file-path",
+                "exists": true,
+                "description": "Gene list, one gene per line. Required when metadata/subset are not given",
+                "errorMessage": "hvgs must be an existing file"
+            },
+            "run_name": {
+                "type": "string",
+                "pattern": "^\\S+$",
+                "unique": true,
+                "description": "Run name. Default: cnmf_{metadata}_{subset}_{YYYYMMDD}, or cnmf_{counts name}_{YYYYMMDD}",
+                "errorMessage": "run_name must be unique and contain no spaces"
+            }
+        },
+        "required": ["counts"],
+        "dependentRequired": {
+            "metadata": ["subset"],
+            "subset": ["metadata"]
+        },
+        "if": {
+            "not": { "required": ["metadata"] }
+        },
+        "then": {
+            "required": ["hvgs"]
+        },
+        "errorMessage": {
+            "dependentRequired": "metadata and subset must be given together",
+            "required": "counts is required, and hvgs is required when metadata/subset are not given"
+        }
+    }
+}

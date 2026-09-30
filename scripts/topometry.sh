@@ -44,7 +44,7 @@ START_DIR=$(pwd)
 cd $TMPDIR
 
 # run script
-/usr/bin/time --verbose apptainer run $HOME/Scratch/cnmf/envs/utricle-qc.sif python $HOME/Scratch/cnmf/scripts/topometry.py \
+/usr/bin/time --verbose apptainer run $HOME/Scratch/cnmf/envs/utricle-qc.sif python $HOME/Scratch/cnmf/bin/topometry.py \
 	--adata "$HOME/Scratch/cnmf/$COUNTS" \
 	--descriptor "$SUBSET" \
 	--metadata "$METADATA"

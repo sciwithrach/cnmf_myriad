@@ -19,4 +19,5 @@ envs
 anndatas/*
 results/*
 **csv
+!samplesheet.csv
 **h5ad
