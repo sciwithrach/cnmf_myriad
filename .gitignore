@@ -18,6 +18,21 @@ envs
 
 anndatas/*
 results/*
+results_test/*
 **csv
 !samplesheet.csv
 **h5ad
+
+############
+# Nextflow #
+############
+
+work/
+.nextflow/
+.nextflow.log*
+
+##########
+# Python #
+##########
+
+__pycache__/
