@@ -47,14 +47,15 @@ One row per run (`samplesheet.csv`). The columns are checked against `assets/sch
 | `metadata` | with `subset` | obs column to subset by, e.g. `ctype` |
 | `subset` | with `metadata` | value to keep, e.g. `MEL` |
 | `k_vals` | no | components (k), space or `;` separated, e.g. `"20 30 40"`. Default: `--k_vals` |
+| `n_iters` | no | iterations per k, e.g. `200`. Default: `--n_iters` |
 | `hvgs` | if no `metadata`/`subset` | gene list, one per line |
 | `run_name` | no | unique run name. Default: `cnmf_{tag}_{YYYYMMDD}` |
 
 ```csv
-counts,metadata,subset,k_vals,hvgs,run_name
-anndatas/adata_ctype.h5ad,ctype,MEL,"20 30 40",,
-anndatas/adata_ctype.h5ad,ctype,HC,"20 30 40 50",,
-anndatas/adata_raw.h5ad,,,"20 30",hvgs.csv,
+counts,metadata,subset,k_vals,n_iters,hvgs,run_name
+anndatas/adata_ctype.h5ad,ctype,MEL,"20 30 40",200,,
+anndatas/adata_ctype.h5ad,ctype,HC,"20 30 40 50",200,,
+anndatas/adata_raw.h5ad,,,"20 30",,hvgs.csv,
 ```
 
 - Rows with `metadata` and `subset`: the counts are subset (failing if the subset has 0 cells), topometry selects the HVGs, then prep onwards. `tag` is `{metadata}_{subset}`.
@@ -81,7 +82,7 @@ nextflow run main.nf -profile ucl_myriad,test
 | `--outdir` | `results_{run_date}` | one folder per sample (cNMF run, topometry, HVGs, logs) |
 | `--run_date` | today (`YYYYMMDD`) | in the default outdir and run names. Pass the same value (or `--outdir`) when resuming on another day |
 | `--k_vals` | `"20 30 40"` | k for rows with no `k_vals` |
-| `--n_iters` | 100 | iterations per k |
+| `--n_iters` | 100 | iterations per k, for rows with no `n_iters` |
 | `--seed` | 42 | seed for `cnmf prepare` |
 | `--stride` | 10 | factorize workers per SGE task |
 

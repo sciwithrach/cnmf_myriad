@@ -18,9 +18,10 @@ include { CONSENSUS } from './modules/local/consensus/main'
 // nf-schema has already validated the samplesheet (assets/schema_input.json); this turns a row into a meta map.
 // samplesheetToList returns each row as a list in schema property order; empty cells may be null or [].
 def makeMeta(row) {
-    def (counts, metadata, subset, k_str, hvgs, run_name) = row.collect { (it instanceof Collection && it.isEmpty()) || it == '' ? null : it }
+    def (counts, metadata, subset, k_str, n_iters_row, hvgs, run_name) = row.collect { (it instanceof Collection && it.isEmpty()) || it == '' ? null : it }
 
     def counts_f = file(counts)
+    def n_iters  = (n_iters_row ?: params.n_iters) as int      // from the row, else --n_iters (CLI values are strings)
     def tag      = metadata ? "${metadata}_${subset}" : counts_f.baseName
     // k values from the row (space or ; separated), else the --k_vals default
     def k_vals   = (k_str ?: params.k_vals).toString().trim().split(/[\s;]+/).collect { it as int }
@@ -33,8 +34,9 @@ def makeMeta(row) {
         hvgs     : hvgs ? file(hvgs) : null,
         k_vals   : k_vals,
         run_name : run_name ?: "cnmf_${tag}_${params.run_date}",
-        n_jobs   : k_vals.size() * (params.n_iters as int),     // CLI values arrive as strings
-        n_chunks : Math.ceil(k_vals.size() * (params.n_iters as int) / (params.stride as int)) as int
+        n_iters  : n_iters,
+        n_jobs   : k_vals.size() * n_iters,
+        n_chunks : Math.ceil(k_vals.size() * n_iters / (params.stride as int)) as int
     ]
 }
 

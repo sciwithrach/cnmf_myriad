@@ -33,6 +33,12 @@
                 "description": "Numbers of components (k), separated by spaces or ';'. Default: --k_vals",
                 "errorMessage": "k_vals must be whole numbers separated by spaces or ';', e.g. \"20 30 40\""
             },
+            "n_iters": {
+                "type": "integer",
+                "minimum": 1,
+                "description": "Iterations per k (cNMF replicates). Default: --n_iters",
+                "errorMessage": "n_iters must be a whole number of at least 1"
+            },
             "hvgs": {
                 "type": "string",
                 "format": "file-path",

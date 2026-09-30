@@ -36,7 +36,7 @@
                     "pattern": "^\\d+([ ;]+\\d+)*$",
                     "description": "Default components (k) for rows with no k_vals in the samplesheet"
                 },
-                "n_iters": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 100, "description": "Iterations per k" },
+                "n_iters": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 100, "description": "Iterations per k, for rows with no n_iters column value" },
                 "stride": { "type": ["integer", "string"], "pattern": "^[1-9]\\d*$", "minimum": 1, "default": 10, "description": "Factorize workers run per SGE task" },
                 "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" },
                 "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" },

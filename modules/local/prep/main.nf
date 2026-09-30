@@ -24,7 +24,7 @@ process PREP {
         --name ${meta.run_name} \\
         -c ${counts} \\
         -k ${meta.k_vals.join(' ')} \\
-        --n-iter ${params.n_iters} \\
+        --n-iter ${meta.n_iters} \\
         --genes-file ${hvgs} \\
         --seed ${params.seed} \\
         --total-workers ${meta.n_jobs}
