@@ -153,6 +153,12 @@ workflow analysis {
 }
 
 workflow {
+    // Nextflow ignores a stray word without complaint, so a typo such as `threshold 0.18` (no --) would run with the
+    // default value. The same happens to `-resume <run name>`, which only accepts `last` or a full session id.
+    if( args )
+        error "Unexpected argument(s): ${args.join(' ')}\n" +
+              "Pipeline options need two dashes (--threshold 0.18). Nextflow options take one, and -resume only accepts a full session id (-resume 1f50da21-...), not a run name."
+
     validateParameters()
     if( params.step == 'consensus' )
         consensus()
