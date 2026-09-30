@@ -1,8 +1,9 @@
-// Cluster comparison plot, and the table of clusterings that CLUSTREE plots. Needs only the topometry AnnData.
+// Cluster comparison plots (one per clustering series: pca, topo, topo_ms) and the table of clusterings that CLUSTREE
+// plots. Needs only the topometry AnnData.
 process CLUSTER_COMPARE {
     container "${projectDir}/envs/cnmf-analysis.sif"
     tag "${meta.tag}"
-    publishDir { "${params.outdir}/${task.tag}/clustering" }, pattern: 'cluster_comparison_on_embedding.png', mode: 'copy'
+    publishDir { "${params.outdir}/${task.tag}/clustering" }, pattern: 'cluster_comparison_on_embedding_*.png', mode: 'copy'
     publishDir { "${params.outdir}/${task.tag}/logs" }, pattern: '.command.{out,err}', mode: 'copy',
         saveAs: { fn -> "${task.process}${fn.replace('.command', '')}" }
 
@@ -11,7 +12,7 @@ process CLUSTER_COMPARE {
 
     output:
     tuple val(meta), path('cluster_table.csv'), path('clustree_series.txt'), emit: table
-    path 'cluster_comparison_on_embedding.png'
+    path 'cluster_comparison_on_embedding_*.png'
     path '.command.out', hidden: true, optional: true
     path '.command.err', hidden: true, optional: true
 

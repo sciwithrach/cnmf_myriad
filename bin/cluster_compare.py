@@ -1,15 +1,14 @@
 #!/usr/bin/env python3
-"""Cluster comparison plot and clustree input for one topometry AnnData.
+"""Cluster comparison plots and clustree input for one topometry AnnData, for every clustering series it has:
 
-Picks the clustering series that matches the latent space topometry chose (`adata.uns['basis']`):
-    ms_spectral*  -> topo_clusters_ms_res*  (Topometry - multiscale latent space)
-    spectral*     -> topo_clusters_res*     (Topometry - spectral latent space)
-    otherwise     -> pca_leiden_res*        (PCA-based latent space)
+    pca      pca_leiden_res*        PCA-based latent space
+    topo     topo_clusters_res*     Topometry - spectral latent space
+    topo_ms  topo_clusters_ms_res*  Topometry - multiscale latent space
 
 Writes, in the current directory:
-    cluster_comparison_on_embedding.png   the projection coloured by --color and by every resolution in the series
-    cluster_table.csv                     cells x resolutions, the input for bin/clustree.R
-    clustree_series.txt                   the column prefix and plot title for bin/clustree.R
+    cluster_comparison_on_embedding_<series>.png   the projection coloured by --color and by every resolution in the series
+    cluster_table.csv                              cells x resolutions of all series, the input for bin/clustree.R
+    clustree_series.txt                            one tab-separated line per series: name, column prefix, plot title
 """
 import argparse
 
@@ -19,14 +18,12 @@ matplotlib.use('Agg')
 import matplotlib.pyplot as plt
 import scanpy as sc
 
-
-def choose_series(basis: str):
-    """Column prefix and clustree title for the latent space named `basis`."""
-    if 'ms_spectral' in basis:
-        return 'topo_clusters_ms_res', 'Topometry - multiscale latent space'
-    if 'spectral' in basis:
-        return 'topo_clusters_res', 'Topometry - spectral latent space'
-    return 'pca_leiden_res', 'PCA-based latent space'
+# name, column prefix (followed by the resolution), title of the clustree plot
+SERIES = [
+    ('pca', 'pca_leiden_res', 'PCA-based latent space'),
+    ('topo', 'topo_clusters_res', 'Topometry - spectral latent space'),
+    ('topo_ms', 'topo_clusters_ms_res', 'Topometry - multiscale latent space'),
+]
 
 
 def build_parser():
@@ -42,14 +39,7 @@ def main():
 
     # only obs, obsm and uns are needed, so leave the expression matrix on disk
     adata = ad.read_h5ad(args.adata, backed='r')
-    basis = str(adata.uns['basis'])
-    prefix, title = choose_series(basis)
-
-    # the series, in order of resolution (topo_clusters_res0.2, ..., topo_clusters_res1.2)
-    cluster_cols = sorted((c for c in adata.obs.columns if c.startswith(prefix)), key=lambda c: float(c[len(prefix):]))
-    if not cluster_cols:
-        raise SystemExit(f'No columns starting with {prefix!r} in {args.adata} (basis: {basis})')
-    print(f'basis: {basis} -> {prefix}* ({len(cluster_cols)} resolutions)')
+    print(f'latent space chosen by topometry: {adata.uns["basis"]}')
 
     colours = []
     if args.color in adata.obs.columns:
@@ -57,22 +47,30 @@ def main():
     else:
         print(f'WARNING: {args.color} is not in adata.obs; plotting the clusterings only')
 
-    adata.obs[cluster_cols] = adata.obs[cluster_cols].astype(str).astype('category')
-    sc.pl.embedding(
-        adata,
-        basis=args.projection,
-        color=colours + cluster_cols,
-        legend_loc='on data',
-        legend_fontsize='xx-small',
-        frameon=False,
-        show=False,
-    )
-    plt.savefig('cluster_comparison_on_embedding.png')
-    plt.close()
+    found, table_cols = [], []
+    for name, prefix, title in SERIES:
+        # the series in order of resolution (topo_clusters_res0.2, ..., topo_clusters_res1.2)
+        cols = sorted((c for c in adata.obs.columns if c.startswith(prefix)), key=lambda c: float(c[len(prefix):]))
+        if not cols:
+            print(f'{name}: no {prefix}* columns, skipped')
+            continue
+        print(f'{name}: {len(cols)} resolutions ({prefix}*)')
 
-    adata.obs[cluster_cols].to_csv('cluster_table.csv')
+        adata.obs[cols] = adata.obs[cols].astype(str).astype('category')
+        sc.pl.embedding(adata, basis=args.projection, color=colours + cols, legend_loc='on data',
+                        legend_fontsize='xx-small', frameon=False, show=False)
+        plt.savefig(f'cluster_comparison_on_embedding_{name}.png')
+        plt.close()
+
+        found.append((name, prefix, title))
+        table_cols += cols
+
+    if not found:
+        raise SystemExit(f'None of the clustering series {[s[1] + "*" for s in SERIES]} are in {args.adata}')
+
+    adata.obs[table_cols].to_csv('cluster_table.csv')
     with open('clustree_series.txt', 'w') as f:
-        f.write(f'{prefix}\n{title}\n')
+        f.writelines(f'{name}\t{prefix}\t{title}\n' for name, prefix, title in found)
 
 
 if __name__ == '__main__':

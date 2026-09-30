@@ -99,10 +99,10 @@ nextflow run main.nf -profile ucl_myriad,test
 
 For rows that go through topometry, the pipeline also draws two plots per sample, into `{outdir}/{tag}/clustering/`. They only need the topometry AnnData, so they start as soon as topometry has finished (listed last in `main.nf`, so resuming an earlier run only adds them):
 
-- `clustree.png`: cluster stability across the six Leiden resolutions (0.2 to 1.2), from `bin/clustree.R` (container `envs/clustree.sif`: `apptainer build envs/clustree.sif envs/clustree.def`).
-- `cluster_comparison_on_embedding.png`: the projection coloured by `--cluster_color` (default `ctype`; skipped if the column is missing) and by every resolution, from `bin/cluster_compare.py`.
+- `clustree_<series>.png`: cluster stability across the six Leiden resolutions (0.2 to 1.2), from `bin/clustree.R` (container `envs/clustree.sif`: `apptainer build envs/clustree.sif envs/clustree.def`).
+- `cluster_comparison_on_embedding_<series>.png`: the projection coloured by `--cluster_color` (default `ctype`; skipped if the column is missing) and by every resolution, from `bin/cluster_compare.py`.
 
-The series follows the latent space topometry chose (`adata.uns['basis']`): `topo_clusters_ms_res*` for a multiscale spectral basis, `topo_clusters_res*` for a spectral one, otherwise `pca_leiden_res*`. Within a subset every cell has the same `ctype`, so that panel is one colour; use `--cluster_color clusters` to compare against the earlier cluster labels instead.
+Both are made for every clustering series in the AnnData, so you can compare the latent spaces before choosing `--clusters` for the analysis step: `pca` (`pca_leiden_res*`), `topo` (`topo_clusters_res*`, spectral) and `topo_ms` (`topo_clusters_ms_res*`, multiscale). A series missing from the AnnData is skipped. Within a subset every cell has the same `ctype`, so that panel is one colour; use `--cluster_color clusters` to compare against the earlier cluster labels instead.
 
 ### After k plot inspection: consensus
 
@@ -153,7 +153,7 @@ The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb
   - `{run_name}/`: cNMF run folder
   - `topometry/`: plots and topometry object (subset rows)
   - `hvgs_{tag}.csv`: HVGs (subset rows)
-  - `clustering/`: `clustree.png` and `cluster_comparison_on_embedding.png` (subset rows)
+  - `clustering/`: `clustree_{pca,topo,topo_ms}.png` and `cluster_comparison_on_embedding_{pca,topo,topo_ms}.png` (subset rows)
   - `logs/{PROCESS}.out|err`: this sample's task logs (successful tasks only; for a failed task see the `work/xx/yyyyyy/` folder Nextflow prints, `.command.out` and `.command.err`)
   - `pipeline_info/run_name.txt`: the cNMF run name, read by the consensus step
   - `pipeline_info/trace.txt`: this sample's trace rows, appended after every run (including consensus)
