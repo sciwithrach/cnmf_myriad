@@ -148,7 +148,7 @@ analysis_call.txt, analysis_call.json                                  (how it w
 
 Figures are saved as PNG and PDF (points are rasterised, text stays editable). Gene panels and the differential expression use log-normalised expression from the raw counts of all genes: genes found in at least 3 cells are kept first, then `normalize_total` (to 1e4) and `log1p`, with no scaling. `dge_by_cluster.csv` has each cluster against all other cells (`rank_genes_groups`, Wilcoxon with `tie_correct=True`): group, gene, score, log fold change, p-value, adjusted p-value and the fraction of cells expressing it in the cluster and in the rest. Clusters with fewer than 10 cells are left out (`--dge_min_cells` on the command line script), and the step is skipped if fewer than two clusters remain.
 
-The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb`, using the functions in `bin/gep_lib`, for running or changing any part in a notebook. The analysis is first sized as 2 cpus, 16 GB and 2 h (`conf/base.config`), before being timed on a real run; the run prints the time each stage takes.
+The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb`, using the functions in `bin/gep_lib`, for running or changing any part in a notebook. The analysis step asks for 1 cpu, 8 GB and 1 h, scaled by attempt on a retry (`conf/base.config`). That is sized from runs on subsets of 7-13k cells (3-4 GB peak, 6-12 min, mostly the differential expression), so a much larger sample may need more; the run prints the time each stage takes.
 
 ### Outputs
 
