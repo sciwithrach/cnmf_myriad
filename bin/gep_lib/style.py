@@ -94,11 +94,9 @@ def categorical_palette(categories: Iterable[str]) -> Dict[str, str]:
 
 
 def age_palette(categories: Iterable[str]) -> Dict[str, str]:
-    """Ordered blue -> purple -> pink -> orange palette for developmental age (categories in age order)."""
+    """The notebook's age colours: seaborn's 'husl' palette with one colour per age (categories in age order)."""
     categories = list(categories)
-    cmap = mpl.colors.LinearSegmentedColormap.from_list('ucl_age', [HERITAGEBLU, BLU, BRIGHTPUR, FUS, ORA])
-    points = np.linspace(0, 1, max(len(categories), 2))
-    return {c: mpl.colors.to_hex(cmap(p)) for c, p in zip(categories, points)}
+    return dict(zip(categories, sb.color_palette('husl', len(categories)).as_hex()))
 
 
 def point_size(n_cells: int, width_in: float) -> float:
@@ -138,4 +136,6 @@ def set_publication_style(dpi: int = 300) -> None:
     })
     # scanpy scatter points are drawn as an image inside vector files, so PDFs stay small
     sc.set_figure_params(vector_friendly=True, dpi_save=dpi, frameon=False, fontsize=7)
+    # scanpy's set_figure_params changes these again, so set them last (a stray grid line showed in the colour bars)
     mpl.rcParams['font.size'] = 7
+    mpl.rcParams['axes.grid'] = False

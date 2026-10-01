@@ -19,7 +19,7 @@ from .style import (DOUBLE_COLUMN, MM, SINGLE_COLUMN, age_palette, categorical_p
 
 COLUMN_KINDS = ('usage', 'gene1', 'gene2', 'gene3', 'gobp', 'collectri')
 # Figure layouts: which panels go in which figure
-MEGAPLOT = ('usage', 'gene1', 'gene2', 'gene3', 'gobp', 'collectri')
+MEGAPLOT = ('usage', 'gene1', 'gene2', 'gene3', 'collectri')    # GOBP is too wide to read here; it has its own figure
 USAGE_GENES = ('usage', 'gene1', 'gene2', 'gene3')
 
 
@@ -56,13 +56,17 @@ def _sorted_categories(values: pd.Series) -> list:
 
 
 def group_palettes(adata: ad.AnnData, age_col: str, cluster_col: str, other_cols: Sequence[str] = ()) -> Dict[str, Dict]:
-    """Colour dictionaries: age (ordered), clusters and any other categorical column (all colours different)."""
+    """Colour dictionaries for age (the notebook's husl colours, in age order), clusters and any other categorical column
+    (all colours different). Each palette is made once and also stored in `adata.uns['<column>_colors']` (scanpy's
+    convention), so every figure, and any later notebook, shows the same colour for the same group."""
     palettes = {}
     for col in [age_col, cluster_col, *other_cols]:
         if col in palettes or col not in adata.obs:
             continue
         cats = [str(c) for c in _sorted_categories(adata.obs[col])]
         palettes[col] = age_palette(cats) if col == age_col else categorical_palette(cats)
+        adata.obs[col] = pd.Categorical(adata.obs[col].astype(str), categories=cats)      # category order = colour order
+        adata.uns[f'{col}_colors'] = [palettes[col][c] for c in cats]
     return palettes
 
 
@@ -87,10 +91,15 @@ def plot_usage_by_cluster(adata, cluster_col, palettes, cutoff, out_base, format
     pct = percent_above(adata, cluster_col, cutoff)
     pct = pct.loc[[str(c) for c in _sorted_categories(adata.obs[cluster_col]) if str(c) in pct.index]]
     colours = pd.Series({c: palettes[cluster_col][c] for c in pct.index}, name='Cluster')
-    g = sb.clustermap(pct, cmap=usage_cmap(), row_cluster=len(pct) > 1, col_cluster=pct.shape[1] > 1, row_colors=colours,
+    g = sb.clustermap(pct, cmap='viridis', row_cluster=len(pct) > 1, col_cluster=pct.shape[1] > 1, row_colors=colours,
                       dendrogram_ratio=(0.06, 0.06), figsize=(DOUBLE_COLUMN, max(60 * MM, 4.5 * MM * len(pct) + 30 * MM)),
-                      cbar_pos=(0.02, 0.8, 0.02, 0.12), linewidths=0)
+                      cbar_pos=(0.945, 0.3, 0.012, 0.4), linewidths=0)
+    g.gs.update(right=0.9)      # leave room on the right for the colour bar, clear of the dendrogram and row colours
+    g.cax.set_position([0.935, 0.3, 0.012, 0.4])
     g.cax.set_title(f'% cells with\nusage > {cutoff}', fontsize=6, loc='left')
+    g.cax.tick_params(labelsize=5)
+    g.ax_row_colors.tick_params(axis='x', length=0)
+    g.ax_row_colors.grid(False)
     g.ax_heatmap.grid(False)
     g.ax_heatmap.set_xlabel('GEP')
     g.ax_heatmap.set_ylabel('Cluster')
@@ -102,7 +111,7 @@ def plot_usage_by_age(adata, age_col, palettes, cutoff, out_base, formats):
     pct = percent_above(adata, age_col, cutoff)
     pct = pct.loc[[str(c) for c in _sorted_categories(adata.obs[age_col]) if str(c) in pct.index]]
     fig, ax = plt.subplots(figsize=(DOUBLE_COLUMN, max(45 * MM, 4.5 * MM * len(pct) + 25 * MM)), layout='constrained')
-    sb.heatmap(pct, ax=ax, cmap=usage_cmap(), cbar_kws={'label': f'% cells with usage > {cutoff}', 'shrink': 0.6})
+    sb.heatmap(pct, ax=ax, cmap='viridis', cbar_kws={'label': f'% cells with usage > {cutoff}', 'shrink': 0.6})
     ax.set_xlabel('GEP')
     ax.set_ylabel('Age')
     ax.grid(False)
@@ -134,10 +143,12 @@ def plot_usage_by_cluster_and_age(adata, cluster_col, age_col, palettes, cutoff,
         ax.imshow(np.array(colours)[:, None, :], aspect='auto', interpolation='nearest')
         ax.set_xticks([0])
         ax.set_xticklabels([name], rotation=90)
+        ax.tick_params(axis='x', length=0)
+        ax.grid(False)
         ax.set_yticks([])
         for spine in ax.spines.values():
             spine.set_visible(False)
-    sb.heatmap(pct.reset_index(drop=True), ax=axs[2], cmap=usage_cmap(), cbar_ax=axs[3], yticklabels=labels,
+    sb.heatmap(pct.reset_index(drop=True), ax=axs[2], cmap='viridis', cbar_ax=axs[3], yticklabels=labels,
                cbar_kws={'label': f'% cells with usage > {cutoff}'}, linewidths=0)
     axs[2].set_xlabel('GEP')
     axs[2].yaxis.tick_right()
@@ -146,6 +157,13 @@ def plot_usage_by_cluster_and_age(adata, cluster_col, age_col, palettes, cutoff,
     axs[2].set_ylabel('')
     axs[2].grid(False)
     axs[3].grid(False)
+
+    # a white line between clusters, across the colour bars and the heatmap
+    starts = [i for i in range(1, len(pct)) if pct.index[i][0] != pct.index[i - 1][0]]
+    for i in starts:
+        for ax in axs[:2]:
+            ax.axhline(i - 0.5, color='white', linewidth=1.5)    # imshow rows are centred on whole numbers
+        axs[2].axhline(i, color='white', linewidth=1.5)          # heatmap cells span i to i + 1
     return save_figure(fig, out_base, formats), pct
 
 
@@ -177,7 +195,7 @@ def plot_projection_summary(adata, basis, columns, palettes, cluster_col, out_ba
 
 
 # --- per-GEP grids and elements ---------------------------------------------------------------------------------
-def _draw_panel(kind, adata, expr, gep, topgenes, results, basis, cmap, ax, top, size):
+def _draw_panel(kind, adata, expr, gep, topgenes, results, basis, cmap, ax, top, size, title=None):
     """Draw panel `kind` for one GEP on `ax`."""
     gep_col = f'GEP_{gep}'
     if kind == 'usage':
@@ -186,7 +204,7 @@ def _draw_panel(kind, adata, expr, gep, topgenes, results, basis, cmap, ax, top,
         genes = list(topgenes[gep_col].iloc[:3])
         plot_gene(expr, genes[int(kind[-1]) - 1], basis, ax, cmap, size)
     elif kind in ('gobp', 'collectri'):
-        plot_enrichment(results[kind], gep, ax, cmap, kind, top)
+        plot_enrichment(results[kind], gep, ax, cmap, kind, top, title)
     else:
         raise ValueError(f'unknown panel {kind}')
 
@@ -200,14 +218,16 @@ def plot_gep_grid(adata, expr, geps, columns, topgenes, results, basis, out_base
     ratios = [1.8 if c in ('gobp', 'collectri') else 1.0 for c in columns]
     width = DOUBLE_COLUMN if len(columns) > 2 else SINGLE_COLUMN
     unit = width / sum(ratios)
-    has_bars = any(c in ('gobp', 'collectri') for c in columns)
-    row_height = max(unit, 36 * MM if has_bars else 24 * MM)   # 10 bar labels need ~30 mm
+    has_embedding = any(c == 'usage' or c.startswith('gene') for c in columns)
+    row_height = unit if has_embedding else max(unit, 36 * MM)   # square cells for projections; 10 GO bar labels need ~30 mm
+    title = None if has_embedding else 'GEP {}'                  # the usage panel carries the GEP name; bar-only figures need it
     size = point_size(adata.n_obs, unit)
     fig, axs = plt.subplots(len(geps), len(columns), figsize=(width, row_height * len(geps)), squeeze=False,
                             gridspec_kw={'width_ratios': ratios}, layout='constrained')
     for i, gep in enumerate(geps):
         for j, kind in enumerate(columns):
-            _draw_panel(kind, adata, expr, gep, topgenes, results, basis, cmap, axs[i, j], top, size)
+            _draw_panel(kind, adata, expr, gep, topgenes, results, basis, cmap, axs[i, j], top, size,
+                        title.format(gep) if title else None)
     return save_figure(fig, out_base, formats)
 
 
@@ -215,7 +235,8 @@ def plot_gep_element(adata, expr, gep, kind, topgenes, results, basis, out_base,
     """A single panel of one GEP as its own figure (e.g. so it can be rearranged in a different layout later)."""
     fig, ax = plt.subplots(figsize=((SINGLE_COLUMN, 50 * MM) if kind in ('gobp', 'collectri') else (50 * MM, 45 * MM)),
                            layout='constrained')
-    _draw_panel(kind, adata, expr, gep, topgenes, results, basis, usage_cmap(), ax, top, point_size(adata.n_obs, 50 * MM))
+    _draw_panel(kind, adata, expr, gep, topgenes, results, basis, usage_cmap(), ax, top, point_size(adata.n_obs, 50 * MM),
+                f'GEP {gep}' if kind in ('gobp', 'collectri') else None)
     return save_figure(fig, out_base, formats)
 
 
