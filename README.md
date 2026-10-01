@@ -114,9 +114,17 @@ nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260
 
 The run name is read from `{outdir}/{sample}/pipeline_info/run_name.txt`; give `--run_name` to override it.
 
+`--step consensus` is followed by a usage refit (`REFIT_USAGE`, `bin/refit_usage.py`, in the cNMF container). cNMF 1.7.1 ends `consensus` with a refit of the usages on the std-scaled TPM of the overdispersed genes (`refit_usage=True`), but it passes the spectra with their genes sorted alphabetically and the data in the overdispersed-gene order. The two are paired by position on different genes, so `*.usages.k_*.consensus.txt` is wrong: the usages do not follow each GEP's top genes (the spectra, gene scores and top genes are fine). `refit_usage.py` repeats the same step with cNMF's own `refit_usage` and settings, with both matrices in the same gene order, and writes `{run_name}.usages.k_{k}.dt_{threshold}.consensus.refit.txt` next to the cNMF files, which are left as they are. It prints how well each GEP's usage follows the mean expression of its top 10 genes (about 0.5 to 0.9 when it is right, about 0 for cNMF's own file).
+
+Samples whose consensus was run before this step existed need it once, without redoing consensus (same `--selected_k` and `--threshold`):
+
+```bash
+nextflow run main.nf -profile ucl_myriad --step refit_usage --outdir results_20260930 --sample ctype_HC --selected_k 10 --threshold 0.08
+```
+
 ### After consensus: GEP analysis
 
-`--step analysis` analyses one sample once consensus has been run: it merges the GEP usages into the topometry AnnData, saves the top genes per GEP, runs GO biological process and CollecTRI enrichment for every GEP (decoupler ULM, once for all GEPs), tests differential expression by cluster, and makes the figures.
+`--step analysis` analyses one sample once consensus (and its usage refit) has been run: it merges the GEP usages into the topometry AnnData, saves the top genes per GEP, runs GO biological process and CollecTRI enrichment for every GEP (decoupler ULM, once for all GEPs), tests differential expression by cluster, and makes the figures.
 
 One-off setup, on a machine with internet access (a login node). Compute nodes may not have any, so the analysis reads these files instead of downloading them:
 
@@ -130,7 +138,7 @@ nextflow run main.nf -profile ucl_myriad --step analysis --outdir results_202609
 
 `--clusters` is the obs column with the cluster labels to use. Choose it from the clustree plot (`clustering/clustree.png`), e.g. `topo_clusters_ms_res0.6`; the default is the `clusters` column. It is used for the usage-by-cluster plots, the projection summary and the differential expression, and the run stops at the start with the list of clustering columns if the name is not in the AnnData.
 
-Use the same `--selected_k` and `--threshold` as for consensus. The run name is read from `run_name.txt` as for consensus. Options (defaults in `nextflow.config`): `--projection` (obsm key to plot on), `--age` (obs column), `--summary_cols` (columns for the projection summary; default age, clusters and `ctype_detailed`, and missing ones are skipped), `--usage_cutoff` (0.1), `--n_top_genes` (100), `--geps_per_page` (6; 0 for one page), `--formats` (`png,pdf`), `--gmt`, `--collectri`.
+Use the same `--selected_k` and `--threshold` as for consensus. The run name is read from `run_name.txt` as for consensus. Options (defaults in `nextflow.config`): `--projection` (obsm key to plot on), `--age` (obs column), `--summary_cols` (columns for the projection summary; default age, clusters and `ctype_detailed`, and missing ones are skipped), `--usage_cutoff` (0.1), `--usage_source` (`refit`, the default, reads the refitted usages file; `file` reads cNMF's own usages file as it is), `--n_top_genes` (100), `--geps_per_page` (6; 0 for one page), `--formats` (`png,pdf`), `--gmt`, `--collectri`.
 
 Outputs go to `{outdir}/{sample}/analysis/`:
 
@@ -173,7 +181,7 @@ The same steps are laid out one by one in `notebooks/gep_analysis_template.ipynb
 ### Layout
 
 ```
-main.nf                 pipeline, consensus and analysis workflows (--step)
+main.nf                 pipeline, consensus, refit_usage and analysis workflows (--step)
 nextflow.config         parameters, plugins, profiles
 nextflow_schema.json    parameter schema (nf-schema)
 assets/                 samplesheet schema, test samplesheet, resources/ (GMT, CollecTRI; not in git)

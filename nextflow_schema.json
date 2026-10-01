@@ -41,7 +41,7 @@
                 "run_date": { "type": "string", "pattern": "^\\d{8}$", "hidden": true, "description": "YYYYMMDD used in the default outdir and run names. Default: today" },
                 "cluster_color": { "type": "string", "default": "ctype", "description": "obs column shown next to the clusterings in the cluster comparison plot; skipped if missing" },
                 "trace_stamp": { "type": "string", "hidden": true, "description": "Timestamp naming this run's raw trace file. Default: now" },
-                "step": { "type": "string", "enum": ["pipeline", "consensus", "analysis"], "default": "pipeline", "description": "pipeline: subset to combine. consensus: build consensus for --sample after inspecting the k selection plot. analysis: GEP analysis for --sample after consensus" }
+                "step": { "type": "string", "enum": ["pipeline", "consensus", "refit_usage", "analysis"], "default": "pipeline", "description": "pipeline: subset to combine. consensus: build consensus for --sample after inspecting the k selection plot, then refit the usages. refit_usage: only the usage refit, for a sample whose consensus is already done. analysis: GEP analysis for --sample after consensus" }
             }
         },
         "consensus_options": {

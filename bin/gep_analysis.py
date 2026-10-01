@@ -58,6 +58,9 @@ def parse_args():
     o.add_argument('--summary_cols', default=None,
                    help='comma-separated obs columns for the projection summary; missing ones are skipped '
                         '(default: --age, --clusters and ctype_detailed)')
+    o.add_argument('--usage_source', choices=['refit', 'file'], default='refit',
+                   help="'refit' repeats the final cNMF usage refit with genes in matching order (cNMF 1.7.1 writes wrong "
+                        "usages); 'file' reads the usages file from cNMF as it is")
     o.add_argument('--usage_cutoff', type=float, default=0.1, help='usage above which a cell counts as using a GEP')
     o.add_argument('--min_cells', type=int, default=10, help='smallest cluster x age group shown in the heatmap')
     o.add_argument('--n_top_genes', type=int, default=100, help='genes saved per GEP')
@@ -90,8 +93,8 @@ def main():
 
     with stage('load and merge'):
         adata = ad.read_h5ad(args.adata)
-        usage, scores = gl.load_gep_results(args.run_dir, args.run_name, args.k, args.threshold)
-        gl.merge_gep_results(adata, usage, scores, args.run_name, args.k, args.threshold)
+        usage, scores = gl.load_gep_results(args.run_dir, args.run_name, args.k, args.threshold, args.usage_source)
+        gl.merge_gep_results(adata, usage, scores, args.run_name, args.k, args.threshold, args.usage_source)
         geps = [gl.gep_number(c) for c in gl.gep_columns(adata)]
         if args.clusters not in adata.obs:
             candidates = [c for c in adata.obs.columns if 'cluster' in c or 'leiden' in c]

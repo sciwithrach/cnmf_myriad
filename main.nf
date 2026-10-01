@@ -1,7 +1,7 @@
 #!/usr/bin/env nextflow
 // cNMF pipeline: subset -> topometry -> prep -> factorize -> combine (+ k selection plot), one chain per samplesheet row.
 //   nextflow run main.nf -profile ucl_myriad --samplesheet samplesheet.csv --n_iters 200
-// Consensus is a separate step, run after inspecting the k selection plot; then --step analysis for the GEP analysis:
+// Consensus (followed by the usage refit) is a separate step, run after inspecting the k selection plot; then --step analysis for the GEP analysis:
 //   nextflow run main.nf -profile ucl_myriad --step consensus --outdir results_20260929 --sample ctype_MEL --selected_k 40 --threshold 0.5
 
 nextflow.enable.dsl = 2
@@ -14,6 +14,7 @@ include { PREP      } from './modules/local/prep/main'
 include { FACTORIZE } from './modules/local/factorize/main'
 include { COMBINE   } from './modules/local/combine/main'
 include { CONSENSUS } from './modules/local/consensus/main'
+include { REFIT_USAGE } from './modules/local/refit_usage/main'
 include { ANALYSIS  } from './modules/local/analysis/main'
 include { CLUSTER_COMPARE } from './modules/local/cluster_compare/main'
 include { CLUSTREE  } from './modules/local/clustree/main'
@@ -60,7 +61,7 @@ def appendTraces() {
     if( lines.size() < 2 || tagCol < 0 ) return
     def rows = lines.tail()
     appendRows(file("${params.outdir}/pipeline_info/trace.txt"), lines[0], rows)
-    def tags = params.step == 'consensus'
+    def tags = params.step != 'pipeline'    // only the pipeline step has a samplesheet; the others work on --sample
         ? [params.sample]
         : samplesheetToList(params.samplesheet, "${projectDir}/assets/schema_input.json").collect { row -> makeMeta(row).tag }
     tags.each { tag ->
@@ -136,6 +137,14 @@ workflow consensus {
     if( !params.sample || !params.selected_k )
         error "Consensus needs --sample and --selected_k (and optionally --run_name, --threshold, --outdir)"
     CONSENSUS( Channel.of(runNameFor(params.sample)) )
+    REFIT_USAGE( CONSENSUS.out.res )     // cNMF 1.7.1's own usages are wrong, see modules/local/refit_usage/main.nf
+}
+
+// the usage refit alone, for a sample whose consensus has already been run (needs the same --selected_k / --threshold)
+workflow refit_usage {
+    if( !params.sample || !params.selected_k )
+        error "The refit_usage step needs --sample and --selected_k (and the --threshold used for consensus)"
+    REFIT_USAGE( Channel.of(runNameFor(params.sample)) )
 }
 
 // after consensus: GEP analysis for one sample (needs the same --selected_k / --threshold as the consensus step)
@@ -162,12 +171,14 @@ workflow {
     validateParameters()
     if( params.step == 'consensus' )
         consensus()
+    else if( params.step == 'refit_usage' )
+        refit_usage()
     else if( params.step == 'analysis' )
         analysis()
     else if( params.step == 'pipeline' )
         pipeline()
     else
-        error "Unknown --step '${params.step}' (use pipeline, consensus or analysis)"
+        error "Unknown --step '${params.step}' (use pipeline, consensus, refit_usage or analysis)"
 
     workflow.onComplete = { appendTraces() }
 }

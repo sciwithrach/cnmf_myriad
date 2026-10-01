@@ -13,7 +13,8 @@ def _dt(threshold: float) -> str:
     return str(float(threshold)).replace('.', '_')
 
 
-def load_gep_results(run_dir: str | Path, run_name: str, k: int, threshold: float) -> Tuple[pd.DataFrame, pd.DataFrame]:
+def load_gep_results(run_dir: str | Path, run_name: str, k: int, threshold: float,
+                     usage_source: str = 'refit') -> Tuple[pd.DataFrame, pd.DataFrame]:
     """Read the consensus usages and gene scores written by `cnmf consensus`.
 
     Parameters
@@ -21,6 +22,9 @@ def load_gep_results(run_dir: str | Path, run_name: str, k: int, threshold: floa
     run_dir : folder holding the cNMF results, e.g. results_test/ctype_MEL/cnmf_test_MEL
     run_name : cNMF run name (the prefix of the files)
     k, threshold : the number of components and local density threshold given to `cnmf consensus`
+    usage_source : 'refit' (default) reads `*.usages.k_*.consensus.refit.txt` from `bin/refit_usage.py` (run by
+        `--step refit_usage`), which repeats cNMF's final usage refit with the genes in matching order; cNMF 1.7.1 pairs
+        them wrongly in its own file. 'file' takes `*.usages.k_*.consensus.txt` as written by cNMF
 
     Returns
     -------
@@ -34,6 +38,13 @@ def load_gep_results(run_dir: str | Path, run_name: str, k: int, threshold: floa
         if not f.exists():
             raise FileNotFoundError(f'{f} not found. Has `cnmf consensus` been run for k={k}, threshold={threshold}?')
 
+    if usage_source == 'refit':
+        usage_file = run_dir / f'{run_name}.usages.k_{k}.dt_{dt}.consensus.refit.txt'
+        if not usage_file.exists():
+            raise FileNotFoundError(f'{usage_file} not found. Run `--step refit_usage` for this sample first '
+                                    f'(cNMF 1.7.1 writes wrong usages), or use --usage_source file.')
+    elif usage_source != 'file':
+        raise ValueError(f"usage_source must be 'refit' or 'file', not {usage_source!r}")
     usage = pd.read_csv(usage_file, sep='\t', index_col=0)
     usage = usage.div(usage.sum(axis=1), axis=0)
     usage.columns = [f'GEP_{int(c)}' for c in usage.columns]
@@ -44,7 +55,7 @@ def load_gep_results(run_dir: str | Path, run_name: str, k: int, threshold: floa
 
 
 def merge_gep_results(adata: ad.AnnData, usage: pd.DataFrame, scores: pd.DataFrame, run_name: str, k: int,
-                      threshold: float) -> ad.AnnData:
+                      threshold: float, usage_source: str = 'refit') -> ad.AnnData:
     """Add GEP usages to `adata.obs` and GEP gene scores to `adata.varm['gep_scores']` (in place).
 
     Usages are joined on the cell barcode; cells without a usage get NaN. Gene scores are aligned to `adata.var_names`
@@ -60,7 +71,7 @@ def merge_gep_results(adata: ad.AnnData, usage: pd.DataFrame, scores: pd.DataFra
 
     adata.varm['gep_scores'] = scores.reindex(adata.var_names).to_numpy()
     adata.uns['gep_names'] = list(scores.columns)
-    adata.uns['cnmf'] = {'run_name': run_name, 'k': int(k), 'threshold': float(threshold)}
+    adata.uns['cnmf'] = {'run_name': run_name, 'k': int(k), 'threshold': float(threshold), 'usage_source': usage_source}
     return adata
 
 
